@@ -537,6 +537,13 @@ body { background: #c8b89a; }
   min-height: 100vh; background: inherit;
 }
 
+
+/* POI 信息卡片 */
+.poi-card {
+  background: #f8f8f8; border-radius: 10px;
+  padding: 10px 12px; font-size: 12px;
+  border-left: 3px solid #3a7a3a;
+}
 </style>
 </head>
 <body>
@@ -864,6 +871,8 @@ const drawerData = {
 var SUPABASE_URL = 'https://eptyoxqgwpgjfpfhmqgi.supabase.co';
 var SUPABASE_KEY = 'sb_publishable_z-6Rva9F75H3mzvgp9TEwA_9dKa7IwE';
 var DEEPSEEK_KEY = 'sk-99dcae7b1be2436dbe16e254b227ae16';
+var TAVILY_KEY = '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';
+var POI_CACHE_TTL = 48 * 60 * 60 * 1000; // 48小时
 var currentCityKey = '';
 var currentCityName = '';
 var checkedItems = JSON.parse(localStorage.getItem('shanxi_checked') || '{}');
@@ -913,6 +922,132 @@ function renderDrawerItems(cityKey, city) {
     localStorage.setItem('shanxi_checked', JSON.stringify(checkedItems));
     updateGlobalBadge();
   };
+}
+
+
+/* ========== POI 实时信息 ========== */
+function renderPoiInfo(provKey, cityKey, city) {
+  var section = document.getElementById('poiSection');
+  if (!section) return;
+
+  // 只对有 play 条目的城市显示，且只取前3个景点查询
+  var pois = (city.play || []).slice(0, 3).map(function(p) { return p.name.split('·')[0].trim(); });
+  if (!pois.length) return;
+
+  section.innerHTML = '<div style="font-size:13px;font-weight:700;color:#333;margin-bottom:8px">📡 景点实时信息</div>' +
+    '<div id="poiCards" style="display:flex;flex-direction:column;gap:8px">' +
+    pois.map(function(p) {
+      return '<div class="poi-card" id="poi-' + encodeURIComponent(p) + '">' +
+        '<div style="display:flex;align-items:center;gap:6px">' +
+        '<span style="font-size:13px;font-weight:600;color:#222">' + p + '</span>' +
+        '<span style="font-size:11px;color:#aaa;margin-left:auto">加载中...</span></div></div>';
+    }).join('');
+  '</div>';
+
+  // 逐个加载 POI 信息
+  pois.forEach(function(poi) {
+    loadPoiInfo(poi, city.name);
+  });
+}
+
+function loadPoiInfo(poiName, cityName) {
+  var cardId = 'poi-' + encodeURIComponent(poiName);
+  var now = Date.now();
+
+  // 先查 Supabase 缓存
+  fetch(SUPABASE_URL + '/rest/v1/poi_cache?poi_name=eq.' + encodeURIComponent(poiName) + '&select=info,updated_at', {
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+  }).then(function(r) { return r.json(); })
+    .then(function(rows) {
+      if (rows.length && rows[0].info) {
+        var updatedAt = new Date(rows[0].updated_at).getTime();
+        if (now - updatedAt < POI_CACHE_TTL) {
+          // 缓存有效，直接渲染
+          renderPoiCard(cardId, rows[0].info);
+          return;
+        }
+      }
+      // 缓存过期或不存在，重新搜索
+      fetchPoiFromTavily(poiName, cityName, cardId);
+    })
+    .catch(function() { fetchPoiFromTavily(poiName, cityName, cardId); });
+}
+
+function fetchPoiFromTavily(poiName, cityName, cardId) {
+  var query = poiName + ' ' + cityName + ' 开放时间 门票 2025 最新';
+  fetch('https://api.tavily.com/search', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      api_key: TAVILY_KEY,
+      query: query,
+      search_depth: 'basic',
+      max_results: 3
+    })
+  }).then(function(r) { return r.json(); })
+    .then(function(data) {
+      var snippets = (data.results || []).map(function(r) { return r.title + ': ' + r.content; }).join('\n');
+      if (!snippets) { renderPoiCard(cardId, { name: poiName, error: '暂无信息' }); return; }
+      // 用 DeepSeek 提炼
+      return fetch('https://api.deepseek.com/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + DEEPSEEK_KEY },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages: [{ role: 'user', content: '从以下搜索结果提取景点信息，只输出JSON，不要其他文字：\n' + snippets + '\n\n输出格式：{"name":"景点名","hours":"开放时间（如无则null）","ticket":"门票价格（如无则null）","notice":"重要公告或维修信息（如无则null）","updated":"信息时间"}' }],
+          max_tokens: 300, temperature: 0.1
+        })
+      });
+    })
+    .then(function(r) { return r && r.json(); })
+    .then(function(d) {
+      if (!d) return;
+      var raw = d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
+      if (!raw) return;
+      try {
+        var info = JSON.parse(raw.replace(/```json\s*/gi,'').replace(/```\s*/g,'').trim());
+        info.name = poiName;
+        renderPoiCard(cardId, info);
+        // 写入/更新缓存
+        savePoiCache(poiName, info);
+      } catch(e) {
+        renderPoiCard(cardId, { name: poiName, error: '解析失败' });
+      }
+    })
+    .catch(function() {
+      renderPoiCard(cardId, { name: poiName, error: '获取失败' });
+    });
+}
+
+function savePoiCache(poiName, info) {
+  // upsert：有则更新，无则插入
+  fetch(SUPABASE_URL + '/rest/v1/poi_cache', {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': 'resolution=merge-duplicates,return=minimal'
+    },
+    body: JSON.stringify({ poi_name: poiName, info: info, updated_at: new Date().toISOString() })
+  }).catch(function() {});
+}
+
+function renderPoiCard(cardId, info) {
+  var card = document.getElementById(cardId);
+  if (!card) return;
+  if (info.error) {
+    card.innerHTML = '<span style="font-size:12px;color:#aaa">' + info.name + '：暂无实时信息</span>';
+    return;
+  }
+  var html = '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">';
+  html += '<span style="font-size:13px;font-weight:600;color:#222">' + info.name + '</span>';
+  if (info.updated) html += '<span style="font-size:10px;color:#bbb;margin-left:auto">' + info.updated + '</span>';
+  html += '</div>';
+  if (info.hours) html += '<div style="font-size:12px;color:#555;margin-bottom:3px">🕐 ' + info.hours + '</div>';
+  if (info.ticket) html += '<div style="font-size:12px;color:#555;margin-bottom:3px">🎫 ' + info.ticket + '</div>';
+  if (info.notice) html += '<div style="font-size:12px;color:#e85a3a;background:#fff5f0;border-radius:6px;padding:5px 8px;margin-top:4px">⚠️ ' + info.notice + '</div>';
+  card.innerHTML = html;
 }
 
 /* ========== 留言 ========== */
