@@ -740,7 +740,7 @@ body { background: #c8b89a; }
 <!-- 行程信息收集弹窗 -->
 <div class="plan-form-overlay" id="planFormOverlay">
   <div class="plan-form-modal">
-    <button class="plan-form-close" onclick="closePlanForm()">✕</button>
+    <button class="plan-form-close" type="button" onclick="closePlanForm()">✕</button>
     <div class="plan-form-title">📋 填写行程信息</div>
     <div class="plan-form-row">
       <label class="plan-form-label">出发地</label>
@@ -755,7 +755,7 @@ body { background: #c8b89a; }
       <input class="plan-form-input" id="pfDays" type="number" min="1" max="14" value="3">
     </div>
     <div id="pfSelectedSummary" style="font-size:12px;color:#888;margin-bottom:12px"></div>
-    <button class="plan-form-submit" onclick="generateGlobalItinerary()">✨ 开始生成行程</button>
+    <button class="plan-form-submit" type="button" onclick="generateGlobalItinerary()">✨ 开始生成行程</button>
   </div>
 </div>
 
@@ -1060,7 +1060,7 @@ function renderComments(cityKey) {
     html += '<div id="commentList"><div style="color:#aaa;font-size:12px;padding:4px 0 8px">留言加载中...</div></div>';
     if (username) {
       html += '<textarea class="comment-input" id="commentText" rows="3" placeholder="分享你的旅行经验..."></textarea>';
-      html += '<button class="comment-submit" id="commentSubmitBtn" onclick="submitComment()">发布</button>';
+      html += '<button class="comment-submit" id="commentSubmitBtn" type="button" onclick="submitComment()">发布</button>';
       html += '<div style="clear:both;font-size:11px;color:#bbb;margin-top:8px">昵称：' + username + ' <span style="color:#3a7a3a;cursor:pointer" onclick="showUsernameModal()">修改</span></div>';
     } else {
       html += '<div class="login-bar">设置昵称后可以留言<button class="login-btn" onclick="showUsernameModal()">设置昵称</button></div>';
