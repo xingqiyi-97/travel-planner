@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>旅行规划</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
+  background: #f0f2f0; min-height: 100vh; overflow-x: hidden;
+}
+
+/* ===== 顶部省份 Tab ===== */
+.province-tabs {
+  position: sticky; top: 0; z-index: 100;
+  background: #fff; border-bottom: 1px solid #e8e8e8;
+  display: flex; overflow-x: auto; padding: 0 12px;
+  scrollbar-width: none;
+}
+.province-tabs::-webkit-scrollbar { display: none; }
+.province-tab {
+  flex-shrink: 0; padding: 12px 16px; font-size: 14px;
+  color: #888; cursor: pointer; border-bottom: 2px solid transparent;
+  transition: all .2s; white-space: nowrap;
+}
+.province-tab.active { color: #3a7a3a; border-bottom-color: #3a7a3a; font-weight: 600; }
+
+/* ===== 省份页面 ===== */
+.province-page { display: none; }
+.province-page.active { display: block; }
+
+/* ===== 城市列表 ===== */
+.city-list { padding: 12px; }
+.city-card {
+  background: #fff; border-radius: 16px; margin-bottom: 12px;
+  overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.06);
+  cursor: pointer; transition: transform .15s;
+  active: { transform: scale(.98); }
+}
+.city-card:active { transform: scale(.98); }
+.city-header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px;
+}
+.city-dot {
+  width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0;
+}
+.city-name { font-size: 17px; font-weight: 700; }
+.city-hint { font-size: 12px; color: #999; margin-top: 2px; }
+.city-arrow { margin-left: auto; color: #ccc; font-size: 16px; }
+.city-tags { padding: 0 16px 12px; display: flex; gap: 6px; flex-wrap: wrap; }
+.city-tag {
+  font-size: 11px; padding: 3px 10px; border-radius: 20px;
+  background: #f5f5f5; color: #666;
+}
+
+/* ===== 抽屉 ===== */
+.drawer-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.4);
+  z-index: 200; display: none;
+}
+.drawer-overlay.open { display: block; }
+.drawer {
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 480px; max-height: 88vh;
+  background: #fff; border-radius: 20px 20px 0 0;
+  z-index: 201; overflow-y: auto;
+  transform: translateX(-50%) translateY(100%);
+  transition: transform .3s cubic-bezier(.4,0,.2,1);
+}
+.drawer.open { transform: translateX(-50%) translateY(0); }
+.drawer-handle {
+  width: 40px; height: 4px; background: #e0e0e0;
+  border-radius: 2px; margin: 12px auto 0;
+}
+.drawer-header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px 8px;
+}
+.drawer-icon { font-size: 28px; }
+.drawer-city-name { font-size: 20px; font-weight: 700; }
+.drawer-close {
+  margin-left: auto; background: #f5f5f5; border: none;
+  border-radius: 50%; width: 30px; height: 30px;
+  font-size: 16px; cursor: pointer; color: #666;
+}
+.drawer-body { padding: 0 0 120px; }
+.drawer-section-title {
+  font-size: 12px; color: #999; padding: 12px 16px 6px;
+  font-weight: 600; letter-spacing: .5px;
+}
+.drawer-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 16px; cursor: pointer;
+  transition: background .15s;
+}
+.drawer-item:active { background: #f5f5f5; }
+.drawer-item.checked { background: #e8f4e8; }
+.check-icon {
+  width: 16px; height: 16px; flex-shrink: 0;
+  border: 1.5px solid #d0d0d0; border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; color: transparent; transition: all .15s; background: #fff;
+}
+.drawer-item.checked .check-icon { border-color: #3a7a3a; background: #3a7a3a; color: #fff; }
+.drawer-item-text { flex: 1; font-size: 14px; color: #222; }
+.item-note { font-size: 12px; color: #999; margin-left: 6px; }
+
+/* ===== 留言 ===== */
+.comment-section { padding: 16px 16px 0; }
+.comment-section-title { font-size: 13px; font-weight: 700; color: #333; margin-bottom: 10px; }
+.comment-card { background: #f8f8f8; border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
+.comment-meta { font-size: 11px; color: #aaa; margin-bottom: 4px; }
+.comment-text { font-size: 13px; color: #444; line-height: 1.6; }
+.comment-input {
+  width: 100%; border: 1px solid #e0e0e0; border-radius: 10px;
+  padding: 10px 12px; font-size: 14px; font-family: inherit;
+  resize: none; margin-top: 10px; outline: none;
+}
+.comment-submit {
+  float: right; margin-top: 8px; background: #3a7a3a; color: #fff;
+  border: none; border-radius: 20px; padding: 7px 20px;
+  font-size: 13px; cursor: pointer;
+}
+.login-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 0; font-size: 13px; color: #888; margin-top: 8px;
+}
+.login-btn {
+  background: #3a7a3a; color: #fff; border: none;
+  border-radius: 16px; padding: 6px 16px; font-size: 12px; cursor: pointer;
+}
+
+/* ===== 昵称弹窗 ===== */
+.username-modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.5);
+  z-index: 300; display: none; align-items: flex-end; justify-content: center;
+}
+.username-modal-overlay.open { display: flex; }
+.username-modal {
+  background: #fff; border-radius: 20px 20px 0 0;
+  width: 100%; max-width: 480px; padding: 24px 20px 40px;
+}
+.username-modal input {
+  width: 100%; border: 1px solid #ddd; border-radius: 10px;
+  padding: 10px 14px; font-size: 15px; margin: 12px 0;
+  font-family: inherit; outline: none;
+}
+.username-modal button {
+  width: 100%; background: #3a7a3a; color: #fff;
+  border: none; border-radius: 16px; padding: 12px;
+  font-size: 15px; cursor: pointer;
+}
+.username-modal-title { font-size: 17px; font-weight: 700; }
+
+/* ===== AI 弹窗 ===== */
+.ai-modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.5);
+  z-index: 300; display: none; align-items: flex-end; justify-content: center;
+}
+.ai-modal-overlay.open { display: flex; }
+.ai-modal {
+  background: #fff; border-radius: 20px 20px 0 0;
+  width: 100%; max-width: 480px; padding: 20px 16px 40px;
+  max-height: 90vh; display: flex; flex-direction: column;
+}
+.ai-modal-title { font-size: 17px; font-weight: 700; flex-shrink: 0; }
+.ai-modal-close {
+  float: right; background: #f5f5f5; border: none;
+  border-radius: 50%; width: 30px; height: 30px;
+  font-size: 16px; cursor: pointer; color: #666;
+}
+.ai-modal-body { overflow-y: auto; flex: 1; padding: 12px 0 8px; }
+
+/* ===== 全局行程按钮 ===== */
+.global-plan-btn {
+  position: fixed; bottom: 28px; right: 20px; z-index: 50;
+  background: #3a7a3a; color: #fff;
+  border: none; border-radius: 28px;
+  padding: 12px 20px; font-size: 14px; font-weight: 700;
+  box-shadow: 0 4px 16px rgba(58,122,58,.4);
+  cursor: pointer; display: none; align-items: center; gap: 8px;
+}
+.global-plan-btn:active { transform: scale(.96); }
+.global-plan-badge {
+  background: #ff5a5a; color: #fff;
+  border-radius: 10px; padding: 1px 7px; font-size: 12px;
+}
+
+/* ===== 行程信息收集弹窗 ===== */
+.plan-form-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.5);
+  z-index: 250; display: none; align-items: flex-end; justify-content: center;
+}
+.plan-form-overlay.open { display: flex; }
+.plan-form-modal {
+  background: #fff; border-radius: 20px 20px 0 0;
+  width: 100%; max-width: 480px; padding: 24px 20px 40px;
+}
+.plan-form-title { font-size: 17px; font-weight: 700; margin-bottom: 20px; color: #1a2a1a; }
+.plan-form-row { margin-bottom: 14px; }
+.plan-form-label { font-size: 13px; color: #666; margin-bottom: 6px; display: block; }
+.plan-form-input {
+  width: 100%; border: 1px solid #ddd; border-radius: 10px;
+  padding: 10px 14px; font-size: 14px; font-family: inherit; outline: none;
+}
+.plan-form-submit {
+  width: 100%; background: #3a7a3a; color: #fff; border: none;
+  border-radius: 16px; padding: 13px; font-size: 15px;
+  font-weight: 600; cursor: pointer; margin-top: 8px;
+}
+.plan-form-close {
+  float: right; background: none; border: none;
+  font-size: 22px; cursor: pointer; color: #888;
+}
+</style>
+</head>
+<body>
+
+<!-- 省份 Tab -->
+<div class="province-tabs" id="provinceTabs"></div>
+
+<!-- 省份内容区 -->
+<div id="provincePages"></div>
+
+<!-- 抽屉 -->
+<div class="drawer-overlay" id="overlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-handle"></div>
+  <div class="drawer-header">
+    <div class="drawer-icon" id="drawerIcon"></div>
+    <div>
+      <div class="drawer-city-name" id="drawerName"></div>
+    </div>
+    <button class="drawer-close" onclick="closeDrawer()">✕</button>
+  </div>
+  <div class="drawer-body" id="drawerBody"></div>
+</div>
+
+<!-- 昵称弹窗 -->
+<div class="username-modal-overlay" id="usernameModalOverlay">
+  <div class="username-modal">
+    <div class="username-modal-title">设置你的昵称</div>
+    <input id="usernameInput" maxlength="20" placeholder="最多20个字符">
+    <button onclick="saveUsername()">确认</button>
+  </div>
+</div>
+
+<!-- AI 结果弹窗 -->
+<div class="ai-modal-overlay" id="aiModalOverlay">
+  <div class="ai-modal">
+    <div style="display:flex;align-items:center;margin-bottom:4px">
+      <button class="ai-modal-close" onclick="closeAiModal()">✕</button>
+      <div class="ai-modal-title" id="aiModalTitle">AI 行程规划</div>
+    </div>
+    <div class="ai-modal-body" id="aiModalBody"></div>
+  </div>
+</div>
+
+<!-- 全局行程按钮 -->
+<button class="global-plan-btn" id="globalPlanBtn" onclick="openPlanForm()">
+  ✨ 生成行程 <span class="global-plan-badge" id="globalBadge">0</span>
+</button>
+
+<!-- 行程信息收集弹窗 -->
+<div class="plan-form-overlay" id="planFormOverlay">
+  <div class="plan-form-modal">
+    <button class="plan-form-close" onclick="closePlanForm()">✕</button>
+    <div class="plan-form-title">📋 填写行程信息</div>
+    <div class="plan-form-row">
+      <label class="plan-form-label">出发地</label>
+      <input class="plan-form-input" id="pfOrigin" placeholder="例如：北京、上海">
+    </div>
+    <div class="plan-form-row">
+      <label class="plan-form-label">出发日期</label>
+      <input class="plan-form-input" id="pfDate" type="date">
+    </div>
+    <div class="plan-form-row">
+      <label class="plan-form-label">总停留天数</label>
+      <input class="plan-form-input" id="pfDays" type="number" min="1" max="14" value="3">
+    </div>
+    <div id="pfSelectedSummary" style="font-size:12px;color:#888;margin-bottom:12px"></div>
+    <button class="plan-form-submit" onclick="generateGlobalItinerary()">✨ 开始生成行程</button>
+  </div>
+</div>
+
+<script>
+/* ========== 省份数据 ========== */
+const PROVINCES = [
+  {
+    key: 'shanxi',
+    name: '山西',
+    emoji: '🏯',
+    bgColor: '#eef2eb',
+    cities: [
+      {
+        key: 'datong', name: '大同', color: '#e8754a',
+        icon: '🏛', hint: '云冈石窟 · 悬空寺 · 雁门关',
+        food: [
+          { name: '齐家疙瘩汤', note: '推荐开花黄馍馍' },
+          { name: '弘雅饭店', note: '' },
+          { name: '凯鸽酒楼', note: '早点去，必点鲜榨沙棘汁+黄米凉糕' },
+          { name: '龙聚祥烧麦馆', note: '点奶皮子卷' },
+          { name: '小媳妇凉粉', note: '' },
+          { name: '浑源县城', note: '去悬空寺路上，吃浑源凉粉、莜面' },
+        ],
+        stay: [
+          { name: '花园酒店', note: '' },
+          { name: '王夫至尊酒店', note: '' },
+        ],
+        play: [
+          { name: '华严寺', note: '' },
+          { name: '云冈石窟', note: '一定要请讲解，或提前看纪录片；推荐3号洞窟附近文创亭子' },
+          { name: '大同美术馆', note: '' },
+          { name: '悬空寺', note: '建议包车' },
+          { name: '应县木塔', note: '建议包车' },
+          { name: '代县·雁门关', note: '建议包车' },
+        ],
+        buy: [
+          { name: '华严寺周边', note: '' },
+          { name: '云冈石窟文创', note: '3号洞窟附近文创亭，货更全' },
+        ],
+      },
+      {
+        key: 'xinzhou', name: '忻州', color: '#4a9be8',
+        icon: '🏔', hint: '芦芽山 · 忻州古城 · 温泉',
+        food: [
+          { name: '碗托', note: '' },
+          { name: '真味居一部', note: '点焖面' },
+          { name: '公园街夜市·荞面河捞', note: '' },
+          { name: '利民中街眼镜烧烤·肉饼大王肉夹馍', note: '' },
+          { name: '彩虹饭店', note: '鳌鱼过油肉' },
+          { name: '和禾拉面', note: '早餐推荐' },
+        ],
+        play: [
+          { name: '芦芽山·后马伦村', note: '像新疆的景色' },
+          { name: '忻州古城', note: '' },
+          { name: '温泉', note: '可以泡温泉' },
+        ],
+      },
+      {
+        key: 'taiyuan', name: '太原', color: '#e8b84a',
+        icon: '🔪', hint: '晋祠 · 省博 · 王家大院',
+        food: [
+          { name: '剔尖面', note: '' },
+          { name: '打卤面', note: '' },
+          { name: '刀削面', note: '' },
+          { name: '御河伍号', note: '茴香白玉丝+沙棘醪糟汤+海皇豆腐煲+醋溜丸子' },
+          { name: '好天地饭庄', note: '' },
+          { name: '炒不烂子', note: '' },
+          { name: '灌肠', note: '' },
+          { name: '南九斤面皮', note: '' },
+          { name: '蘸串串', note: '' },
+          { name: '酸甜麻辣拌', note: '' },
+          { name: '沾片子', note: '' },
+        ],
+        play: [
+          { name: '晋祠', note: '' },
+          { name: '山西省博物馆', note: '' },
+          { name: '太原植物园', note: '' },
+          { name: '榆次·常家庄园', note: '建议包车' },
+          { name: '王家大院', note: '建议包车' },
+        ],
+      },
+      {
+        key: 'linfen', name: '临汾', color: '#7ab84a',
+        icon: '💧', hint: '壶口瀑布 · 小西天 · 飞虹塔',
+        food: [
+          { name: '吉县苹果', note: '' },
+          { name: '隰县梨', note: '' },
+          { name: '白家牛肉丸子面', note: '' },
+          { name: '臻火候饼墩墩', note: '' },
+        ],
+        play: [
+          { name: '小西天', note: '' },
+          { name: '壶口瀑布', note: '' },
+          { name: '广胜寺·飞虹塔', note: '' },
+        ],
+      },
+      {
+        key: 'yuncheng', name: '运城', color: '#e84a6f',
+        icon: '🧂', hint: '盐湖 · 永乐宫 · 关公圣像',
+        food: [
+          { name: '星河摇滚炒鸡（总店）', note: '' },
+          { name: '焦圈', note: '' },
+          { name: '枣蛋', note: '' },
+          { name: '黄河夜市', note: '老王烧烤运城凉菜、麻辣串、孜然炒面、茶汤' },
+          { name: '雪花酪', note: '' },
+          { name: '张氏北相羊肉胡卜（八一总店）', note: '吃羊肉胡卜+蒜爆羊肚' },
+        ],
+        play: [
+          { name: '关公圣像', note: '' },
+          { name: '盐湖', note: '' },
+          { name: '关帝庙', note: '' },
+          { name: '芮城·永乐宫', note: '周边景点' },
+        ],
+      },
+    ]
+  },
+  // ===== 云南（待填）=====
+  {
+    key: 'yunnan',
+    name: '云南',
+    emoji: '🌸',
+    bgColor: '#f0eefc',
+    cities: [
+      // { key: 'kunming', name: '昆明', color: '#8a6ae8', icon: '🌺', hint: '滇池 · 石林 · 翠湖', food: [], play: [] },
+      // 待填充...
+    ]
+  },
+  // ===== 甘肃（待填）=====
+  {
+    key: 'gansu',
+    name: '甘肃',
+    emoji: '🏜',
+    bgColor: '#fdf0e8',
+    cities: [
+      // { key: 'dunhuang', name: '敦煌', color: '#e8a03a', icon: '🐫', hint: '莫高窟 · 鸣沙山 · 月牙泉', food: [], play: [] },
+      // 待填充...
+    ]
+  },
+];
+
+/* ========== 全局状态 ========== */
+var checkedItems = JSON.parse(localStorage.getItem('travel_checked') || '{}');
+var username = localStorage.getItem('travel_username') || '';
+var currentCityKey = '';
+var currentCityName = '';
+var currentProvinceKey = '';
+var SUPABASE_URL = 'https://eptyoxqgwpgjfpfhmqgi.supabase.co';
+var SUPABASE_KEY = 'sb_publishable_z-6Rva9F75H3mzvgp9TEwA_9dKa7IwE';
+var DEEPSEEK_KEY = 'sk-99dcae7b1be2436dbe16e254b227ae16';
+
+/* ========== 初始化省份 Tab 和页面 ========== */
+function initProvinces() {
+  var tabsEl = document.getElementById('provinceTabs');
+  var pagesEl = document.getElementById('provincePages');
+
+  PROVINCES.forEach(function(prov, i) {
+    // Tab
+    var tab = document.createElement('div');
+    tab.className = 'province-tab' + (i === 0 ? ' active' : '');
+    tab.textContent = prov.emoji + ' ' + prov.name;
+    tab.onclick = function() { switchProvince(prov.key); };
+    tab.dataset.key = prov.key;
+    tabsEl.appendChild(tab);
+
+    // 页面
+    var page = document.createElement('div');
+    page.className = 'province-page' + (i === 0 ? ' active' : '');
+    page.id = 'page-' + prov.key;
+    page.style.background = prov.bgColor;
+    page.style.minHeight = '100vh';
+
+    if (!prov.cities.length) {
+      page.innerHTML = '<div style="text-align:center;padding:60px 20px;color:#aaa"><div style="font-size:48px;margin-bottom:16px">' + prov.emoji + '</div><div style="font-size:16px">' + prov.name + ' 攻略即将上线</div><div style="font-size:13px;margin-top:8px">敬请期待～</div></div>';
+    } else {
+      var html = '<div class="city-list">';
+      prov.cities.forEach(function(city) {
+        html += '<div class="city-card" onclick="openDrawer(\'' + prov.key + '\',\'' + city.key + '\')">';
+        html += '<div class="city-header">';
+        html += '<div class="city-dot" style="background:' + city.color + '"></div>';
+        html += '<div><div class="city-name">' + city.name + '</div>';
+        if (city.hint) html += '<div class="city-hint">' + city.hint + '</div>';
+        html += '</div><div class="city-arrow">›</div></div>';
+        html += '<div class="city-tags">';
+        if (city.food && city.food.length) html += '<span class="city-tag">🍜 ' + city.food.length + '个美食</span>';
+        if (city.play && city.play.length) html += '<span class="city-tag">🗺 ' + city.play.length + '个景点</span>';
+        if (city.stay && city.stay.length) html += '<span class="city-tag">🏨 ' + city.stay.length + '个住宿</span>';
+        if (city.buy && city.buy.length) html += '<span class="city-tag">🛍 ' + city.buy.length + '个好物</span>';
+        html += '</div></div>';
+      });
+      html += '</div>';
+      page.innerHTML = html;
+    }
+    pagesEl.appendChild(page);
+  });
+}
+
+function switchProvince(key) {
+  document.querySelectorAll('.province-tab').forEach(function(t) {
+    t.classList.toggle('active', t.dataset.key === key);
+  });
+  document.querySelectorAll('.province-page').forEach(function(p) {
+    p.classList.toggle('active', p.id === 'page-' + key);
+  });
+}
+
+/* ========== 抽屉 ========== */
+function openDrawer(provKey, cityKey) {
+  var prov = PROVINCES.find(function(p) { return p.key === provKey; });
+  if (!prov) return;
+  var city = prov.cities.find(function(c) { return c.key === cityKey; });
+  if (!city) return;
+
+  currentProvinceKey = provKey;
+  currentCityKey = provKey + ':' + cityKey;
+  currentCityName = city.name;
+
+  document.getElementById('drawerIcon').textContent = city.icon || '📍';
+  document.getElementById('drawerName').textContent = city.name;
+  document.getElementById('drawerName').style.color = city.color;
+
+  renderDrawerItems(provKey, cityKey, city);
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('drawer').classList.add('open');
+}
+
+function closeDrawer() {
+  document.getElementById('overlay').classList.remove('open');
+  document.getElementById('drawer').classList.remove('open');
+}
+
+function renderDrawerItems(provKey, cityKey, city) {
+  var sections = [
+    { key: 'food', label: '🍜 吃', items: city.food },
+    { key: 'play', label: '🗺 游', items: city.play },
+    { key: 'stay', label: '🏨 住', items: city.stay },
+    { key: 'buy', label: '🛍 买', items: city.buy },
+  ];
+  var html = '';
+  sections.forEach(function(sec) {
+    if (!sec.items || !sec.items.length) return;
+    html += '<div class="drawer-section-title">' + sec.label + '</div>';
+    sec.items.forEach(function(item) {
+      var ck = currentCityKey + ':' + sec.key + ':' + item.name;
+      var cls = checkedItems[ck] ? ' checked' : '';
+      html += '<div class="drawer-item' + cls + '" data-ck="' + ck.replace(/"/g,'&quot;') + '">';
+      html += '<span class="check-icon">✓</span>';
+      html += '<div class="drawer-item-text">' + item.name;
+      if (item.note) html += '<span class="item-note">' + item.note + '</span>';
+      html += '</div></div>';
+    });
+  });
+  var body = document.getElementById('drawerBody');
+  body.innerHTML = html;
+
+  // 事件委托勾选
+  body.onclick = function(e) {
+    var el = e.target.closest('.drawer-item');
+    if (!el) return;
+    var ck = el.dataset.ck;
+    if (checkedItems[ck]) { delete checkedItems[ck]; el.classList.remove('checked'); }
+    else { checkedItems[ck] = true; el.classList.add('checked'); }
+    localStorage.setItem('travel_checked', JSON.stringify(checkedItems));
+    updateGlobalBadge();
+  };
+
+  // 留言区
+  html += '<div class="comment-section" id="commentSection"></div>';
+  body.innerHTML = html;
+  body.onclick = function(e) {
+    var el = e.target.closest('.drawer-item');
+    if (!el) return;
+    var ck = el.dataset.ck;
+    if (checkedItems[ck]) { delete checkedItems[ck]; el.classList.remove('checked'); }
+    else { checkedItems[ck] = true; el.classList.add('checked'); }
+    localStorage.setItem('travel_checked', JSON.stringify(checkedItems));
+    updateGlobalBadge();
+  };
+  renderComments(provKey + ':' + cityKey);
+}
+
+/* ========== 留言 ========== */
+function renderComments(cityKey) {
+  var section = document.getElementById('commentSection');
+  if (!section) return;
+  var formHtml = '<div class="comment-section-title">💬 旅行者留言</div>';
+  formHtml += '<div id="commentList"><div style="color:#aaa;font-size:12px;padding:4px 0 8px">加载中...</div></div>';
+  if (username) {
+    formHtml += '<textarea class="comment-input" id="commentText" rows="3" placeholder="分享你的旅行经验..."></textarea>';
+    formHtml += '<button class="comment-submit" id="commentSubmitBtn" onclick="submitComment()">发布</button>';
+    formHtml += '<div style="clear:both;font-size:11px;color:#bbb;margin-top:8px">昵称：' + username + ' <span style="color:#3a7a3a;cursor:pointer" onclick="showUsernameModal()">修改</span></div>';
+  } else {
+    formHtml += '<div class="login-bar">设置昵称后可以留言<button class="login-btn" onclick="showUsernameModal()">设置昵称</button></div>';
+  }
+  section.innerHTML = formHtml;
+  loadCommentList(cityKey);
+}
+
+function loadCommentList(cityKey) {
+  var list = document.getElementById('commentList');
+  if (!list) return;
+  fetch(SUPABASE_URL + '/rest/v1/comments?city=eq.' + encodeURIComponent(cityKey) + '&order=created_at.desc&limit=50', {
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+  }).then(function(r) { return r.json(); })
+    .then(function(comments) {
+      list = document.getElementById('commentList');
+      if (!list) return;
+      if (!comments.length) {
+        list.innerHTML = '<div style="color:#bbb;font-size:12px;padding:4px 0 8px">还没有留言，来第一个吧～</div>';
+      } else {
+        var h = '';
+        comments.forEach(function(c) {
+          var t = new Date(c.created_at);
+          var ts = (t.getMonth()+1) + '月' + t.getDate() + '日';
+          h += '<div class="comment-card"><div class="comment-meta"><b>' + c.username + '</b>  ' + ts + '</div>';
+          h += '<div class="comment-text">' + c.content.replace(/&/g,'&amp;').replace(/</g,'&lt;') + '</div></div>';
+        });
+        list.innerHTML = h;
+      }
+    }).catch(function() {
+      var list2 = document.getElementById('commentList');
+      if (list2) list2.innerHTML = '<div style="color:#aaa;font-size:12px">留言加载失败</div>';
+    });
+}
+
+function submitComment() {
+  var ta = document.getElementById('commentText');
+  if (!ta || !ta.value.trim()) return;
+  var txt = ta.value.trim();
+  if (txt.length > 500) { alert('留言不能超过500字'); return; }
+  var btn = document.getElementById('commentSubmitBtn');
+  if (btn) btn.disabled = true;
+  var cityKey = currentCityKey;
+  fetch(SUPABASE_URL + '/rest/v1/comments', {
+    method: 'POST',
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ city: cityKey, username: username, content: txt })
+  }).then(function(r) {
+    if (btn) btn.disabled = false;
+    if (r.ok) { document.getElementById('commentText').value = ''; loadCommentList(cityKey); }
+    else { r.text().then(function(e) { alert('发布失败：' + e); }); }
+  }).catch(function() { if (btn) btn.disabled = false; alert('网络错误'); });
+}
+
+/* ========== 昵称 ========== */
+function showUsernameModal() {
+  document.getElementById('usernameInput').value = username;
+  document.getElementById('usernameModalOverlay').classList.add('open');
+}
+function saveUsername() {
+  var v = document.getElementById('usernameInput').value.trim();
+  if (!v) { alert('请输入昵称'); return; }
+  username = v;
+  localStorage.setItem('travel_username', username);
+  document.getElementById('usernameModalOverlay').classList.remove('open');
+  renderComments(currentCityKey);
+}
+
+/* ========== 全局勾选 Badge ========== */
+function updateGlobalBadge() {
+  var total = Object.keys(checkedItems).length;
+  var btn = document.getElementById('globalPlanBtn');
+  var badge = document.getElementById('globalBadge');
+  btn.style.display = total > 0 ? 'flex' : 'none';
+  badge.textContent = total;
+}
+
+/* ========== 行程信息收集弹窗 ========== */
+function openPlanForm() {
+  var cityItems = {};
+  Object.keys(checkedItems).forEach(function(key) {
+    var parts = key.split(':');
+    // key 格式: province:city:section:name
+    var cityLabel = parts[0] + ':' + parts[1];
+    var name = parts[3];
+    if (!cityItems[cityLabel]) cityItems[cityLabel] = [];
+    cityItems[cityLabel].push(name);
+  });
+  var summary = '已选：';
+  Object.keys(cityItems).forEach(function(ck) {
+    var parts = ck.split(':');
+    var prov = PROVINCES.find(function(p) { return p.key === parts[0]; });
+    var city = prov && prov.cities.find(function(c) { return c.key === parts[1]; });
+    var label = city ? city.name : ck;
+    summary += label + '(' + cityItems[ck].length + '项) ';
+  });
+  document.getElementById('pfSelectedSummary').textContent = summary;
+  if (!document.getElementById('pfDate').value) {
+    var d = new Date(); var mm = ('0'+(d.getMonth()+1)).slice(-2); var dd = ('0'+d.getDate()).slice(-2);
+    document.getElementById('pfDate').value = d.getFullYear()+'-'+mm+'-'+dd;
+  }
+  document.getElementById('planFormOverlay').classList.add('open');
+}
+function closePlanForm() { document.getElementById('planFormOverlay').classList.remove('open'); }
+
+/* ========== AI 生成行程 ========== */
+function generateGlobalItinerary() {
+  var origin = document.getElementById('pfOrigin').value.trim();
+  var date = document.getElementById('pfDate').value;
+  var days = parseInt(document.getElementById('pfDays').value) || 3;
+  if (!origin) { alert('请填写出发地'); return; }
+  if (!date) { alert('请选择出发日期'); return; }
+
+  var cityItems = {};
+  var cityOrder = [];
+  Object.keys(checkedItems).forEach(function(key) {
+    var parts = key.split(':');
+    var cityLabel = parts[0] + ':' + parts[1];
+    var name = parts[3];
+    if (!cityItems[cityLabel]) { cityItems[cityLabel] = []; cityOrder.push(cityLabel); }
+    cityItems[cityLabel].push(name);
+  });
+
+  if (!cityOrder.length) { alert('请先勾选想去的地方～'); return; }
+
+  var itemDesc = cityOrder.map(function(ck) {
+    var parts = ck.split(':');
+    var prov = PROVINCES.find(function(p) { return p.key === parts[0]; });
+    var city = prov && prov.cities.find(function(c) { return c.key === parts[1]; });
+    var label = (prov ? prov.name : parts[0]) + (city ? city.name : parts[1]);
+    return label + '：' + cityItems[ck].join('、');
+  }).join('；');
+
+  closePlanForm();
+  document.getElementById('aiModalTitle').textContent = '✨ AI 行程规划';
+  document.getElementById('aiModalBody').innerHTML = '<div style="color:#888;padding:20px 0;text-align:center">🤔 规划中，约10秒...</div>';
+  document.getElementById('aiModalOverlay').classList.add('open');
+
+  var dateStr = date.replace(/-/g, '/');
+  var prompt = '你是专业旅行规划师。根据以下信息生成行程，只输出JSON数组，不要任何其他文字或代码块标记。\n出发地：' + origin + '\n出发日期：' + dateStr + '\n总天数：' + days + '天\n已选内容：' + itemDesc + '\n\n格式（严格JSON数组）：[{"day":1,"date":"5/20 周二","city":"大同","theme":"云冈石窟·古城","slots":[{"time":"上午","icon":"🏛","title":"云冈石窟","desc":"重点看第20窟大佛，游览约2小时","tip":"早去人少"},{"time":"交通","icon":"🚗","title":"大同→忻州","desc":"高铁D字头约1.5小时，票价约60元；或自驾高速约2小时","tip":"建议提前买高铁票"}]}]\n\n交通要求：\n1. 第1天第一个slot必须是从出发地到第一个目的地城市的交通，包含具体交通方式、时长、票价\n2. 城市间转场必须加交通slot，注明推荐方式+时长+票价范围\n3. 同城景点间在desc里说明移动方式（步行/打车/公交+几分钟）\n4. 每天4-5个slot（上午/中午/下午/晚上/交通），贴士一句话口语化';
+
+  fetch('https://api.deepseek.com/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + DEEPSEEK_KEY },
+    body: JSON.stringify({ model: 'deepseek-chat', messages: [{ role: 'user', content: prompt }], max_tokens: 2000, temperature: 0.7 })
+  }).then(function(r) { return r.json(); })
+    .then(function(d) {
+      var raw = d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
+      if (!raw) { document.getElementById('aiModalBody').textContent = '生成失败，请重试'; return; }
+      try {
+        var jsonStr = raw.replace(/```json\s*/gi,'').replace(/```\s*/g,'').trim();
+        var plan = JSON.parse(jsonStr);
+        document.getElementById('aiModalBody').innerHTML = renderPlanCards(plan);
+      } catch(e) {
+        document.getElementById('aiModalBody').innerHTML = '<pre style="white-space:pre-wrap;font-size:13px;line-height:1.7">' + raw + '</pre>';
+      }
+    })
+    .catch(function() { document.getElementById('aiModalBody').textContent = '网络错误，请重试'; });
+}
+
+/* ========== 渲染行程卡片 ========== */
+function renderPlanCards(plan) {
+  var dayColors = ['#4a7a4a','#5a6fa8','#a06a3a','#7a4a8a','#3a7a7a'];
+  var html = '<div style="padding:4px 0">';
+  plan.forEach(function(day, di) {
+    var color = dayColors[di % dayColors.length];
+    html += '<div style="margin-bottom:20px">';
+    html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">';
+    html += '<div style="background:' + color + ';color:#fff;border-radius:20px;padding:4px 14px;font-size:13px;font-weight:700">Day ' + day.day + ' · ' + (day.date||'') + '</div>';
+    html += '<div style="font-size:13px;color:#555;flex:1">' + (day.city||'') + '</div></div>';
+    if (day.theme) html += '<div style="font-size:12px;color:#888;margin:-6px 0 10px 4px">✦ ' + day.theme + '</div>';
+    if (day.slots) {
+      day.slots.forEach(function(slot) {
+        html += '<div style="display:flex;gap:10px;margin-bottom:8px;align-items:flex-start">';
+        html += '<div style="display:flex;flex-direction:column;align-items:center;padding-top:3px">';
+        html += '<div style="width:8px;height:8px;border-radius:50%;background:' + color + ';flex-shrink:0"></div>';
+        html += '<div style="width:2px;flex:1;background:#e0e0e0;margin-top:3px;min-height:24px"></div></div>';
+        var bg = slot.time === '交通' ? '#f5f5f5' : '#fafafa';
+        html += '<div style="flex:1;background:' + bg + ';border-radius:12px;padding:10px 12px">';
+        html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">';
+        html += '<span style="font-size:11px;color:#fff;background:' + color + ';border-radius:6px;padding:2px 7px;flex-shrink:0;font-weight:600">' + (slot.time||'') + '</span>';
+        html += '<span style="font-size:18px">' + (slot.icon||'📍') + '</span>';
+        html += '<span style="font-size:14px;font-weight:600;color:#222">' + (slot.title||'') + '</span></div>';
+        if (slot.desc) html += '<div style="font-size:13px;color:#444;line-height:1.6;margin-bottom:4px">' + slot.desc + '</div>';
+        if (slot.tip) html += '<div style="font-size:11px;color:#888;background:rgba(0,0,0,.04);border-radius:6px;padding:4px 8px">💡 ' + slot.tip + '</div>';
+        html += '</div></div>';
+      });
+    }
+    html += '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+function closeAiModal() { document.getElementById('aiModalOverlay').classList.remove('open'); }
+
+/* ========== 启动 ========== */
+initProvinces();
+updateGlobalBadge();
+
+// 抽屉下滑关闭
+var startY = 0;
+document.getElementById('drawer').addEventListener('touchstart', function(e) { startY = e.touches[0].clientY; });
+document.getElementById('drawer').addEventListener('touchend', function(e) {
+  var dy = e.changedTouches[0].clientY - startY;
+  if (dy > 80 && this.scrollTop <= 0) closeDrawer();
+});
+</script>
+</body>
+</html>
