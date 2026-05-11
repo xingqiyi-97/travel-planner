@@ -732,6 +732,26 @@ body { background: #c8b89a; }
   <div style="padding:0 16px 16px" id="commentSection"></div>
 </div>
 
+<!-- AI 结果弹窗 -->
+<div class="ai-modal-overlay" id="aiModalOverlay">
+  <div class="ai-modal">
+    <div style="display:flex;align-items:center;margin-bottom:4px">
+      <button class="ai-modal-close" type="button" onclick="closeAiModal()">✕</button>
+      <div class="ai-modal-title" id="aiModalTitle">AI 行程规划</div>
+    </div>
+    <div class="ai-modal-body" id="aiModalBody"></div>
+  </div>
+</div>
+
+<!-- 昵称弹窗 -->
+<div class="username-modal-overlay" id="usernameModalOverlay">
+  <div class="username-modal">
+    <div class="username-modal-title">设置你的昵称</div>
+    <input id="usernameInput" maxlength="20" placeholder="最多20个字符">
+    <button type="button" onclick="saveUsername()">确认</button>
+  </div>
+</div>
+
 <!-- 全局行程按钮 -->
 <button class="global-plan-btn" id="globalPlanBtn" onclick="openPlanForm()">
   ✨ 生成行程 <span class="global-plan-badge" id="globalBadge">0</span>
