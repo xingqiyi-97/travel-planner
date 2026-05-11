@@ -5,175 +5,463 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>旅行规划</title>
 <style>
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
-  background: #f0f2f0; min-height: 100vh; overflow-x: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif;
+  background: #e8ede6;
+  min-height: 100vh;
+  overflow-x: hidden;
 }
 
-/* ===== 顶部省份 Tab ===== */
-.province-tabs {
-  position: sticky; top: 0; z-index: 100;
-  background: #fff; border-bottom: 1px solid #e8e8e8;
-  display: flex; overflow-x: auto; padding: 0 12px;
-  scrollbar-width: none;
+/* 地图容器 */
+.map-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100vh;
+  background: #eef2eb;
+  overflow: hidden;
 }
-.province-tabs::-webkit-scrollbar { display: none; }
-.province-tab {
-  flex-shrink: 0; padding: 12px 16px; font-size: 14px;
-  color: #888; cursor: pointer; border-bottom: 2px solid transparent;
-  transition: all .2s; white-space: nowrap;
-}
-.province-tab.active { color: #3a7a3a; border-bottom-color: #3a7a3a; font-weight: 600; }
 
-/* ===== 省份页面 ===== */
-.province-page { display: none; }
-.province-page.active { display: block; }
+/* 地图背景 SVG */
+.map-bg {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+}
 
-/* ===== 城市列表 ===== */
-.city-list { padding: 12px; }
-.city-card {
-  background: #fff; border-radius: 16px; margin-bottom: 12px;
-  overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.06);
-  cursor: pointer; transition: transform .15s;
-  active: { transform: scale(.98); }
+/* 顶栏 */
+.topbar {
+  position: relative;
+  z-index: 10;
+  padding: 52px 20px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
-.city-card:active { transform: scale(.98); }
-.city-header {
-  display: flex; align-items: center; gap: 12px;
-  padding: 14px 16px;
+.topbar-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #1a2a1a;
+  letter-spacing: 1px;
 }
+.topbar-sub {
+  font-size: 12px;
+  color: #6b7c6b;
+  margin-top: 2px;
+}
+.topbar-badge {
+  background: #4a7c59;
+  color: #fff;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 20px;
+  font-weight: 600;
+  margin-left: auto;
+}
+
+/* 路线容器 */
+.route-area {
+  position: relative;
+  padding: 10px 0 80px;
+  z-index: 5;
+}
+
+/* 城市卡片 */
+.city-row {
+  display: flex;
+  align-items: flex-start;
+  padding: 8px 16px;
+  gap: 12px;
+  position: relative;
+}
+.city-row.right {
+  flex-direction: row-reverse;
+}
+
+/* 路线竖线 */
+.route-line {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 3px;
+  background: linear-gradient(to bottom, #4a7c59 0%, #7eb88a 50%, #b8d4be 100%);
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+}
+
+/* 城市圆点 */
 .city-dot {
-  width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0;
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, 28px);
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  z-index: 3;
+  box-shadow: 0 2px 6px rgba(0,0,0,.2);
+  cursor: pointer;
+  transition: transform .2s;
+  flex-shrink: 0;
 }
-.city-name { font-size: 17px; font-weight: 700; }
-.city-hint { font-size: 12px; color: #999; margin-top: 2px; }
-.city-arrow { margin-left: auto; color: #ccc; font-size: 16px; }
-.city-tags { padding: 0 16px 12px; display: flex; gap: 6px; flex-wrap: wrap; }
-.city-tag {
-  font-size: 11px; padding: 3px 10px; border-radius: 20px;
-  background: #f5f5f5; color: #666;
+.city-dot:hover { transform: translate(-50%, 28px) scale(1.2); }
+.dot-datong    { background: #e8754a; }
+.dot-xinzhou   { background: #4a9be8; }
+.dot-taiyuan   { background: #e8b84a; }
+.dot-linfen    { background: #9b4ae8; }
+.dot-yuncheng  { background: #e84a6f; }
+
+/* 卡片气泡 */
+.city-card {
+  background: #fff;
+  border-radius: 18px;
+  padding: 14px 16px;
+  max-width: 180px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.12);
+  cursor: pointer;
+  transition: transform .2s, box-shadow .2s;
+  position: relative;
+  z-index: 4;
+  flex-shrink: 0;
+}
+.city-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0,0,0,.18);
+}
+.city-card.active {
+  box-shadow: 0 8px 24px rgba(0,0,0,.25);
+  transform: translateY(-2px);
+}
+.card-name {
+  font-size: 17px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+.card-tag {
+  display: inline-block;
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-weight: 600;
+  margin-right: 4px;
+  margin-bottom: 4px;
+}
+.tag-food { background: #fff0eb; color: #e8754a; }
+.tag-play { background: #ebf4ff; color: #4a7ce8; }
+.tag-buy  { background: #f0ebff; color: #7c4ae8; }
+.card-hint { font-size: 11px; color: #aaa; margin-top: 4px; }
+
+/* 颜色 */
+.name-datong   { color: #e8754a; }
+.name-xinzhou  { color: #4a9be8; }
+.name-taiyuan  { color: #c89a20; }
+.name-linfen   { color: #9b4ae8; }
+.name-yuncheng { color: #e84a6f; }
+
+/* 气泡小三角 */
+.city-card::after {
+  content: '';
+  position: absolute;
+  top: 30px;
+  width: 0; height: 0;
+}
+.city-row:not(.right) .city-card::after {
+  right: -10px;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-left: 10px solid #fff;
+}
+.city-row.right .city-card::after {
+  left: -10px;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-right: 10px solid #fff;
 }
 
-/* ===== 抽屉 ===== */
+/* 间距撑开 */
+.spacer { height: 60px; position: relative; }
+.spacer:first-child { height: 20px; }
+
+/* 详情抽屉 */
 .drawer-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,.4);
-  z-index: 200; display: none;
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.35);
+  z-index: 100;
+  backdrop-filter: blur(2px);
 }
 .drawer-overlay.open { display: block; }
+
 .drawer {
-  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
-  width: 100%; max-width: 480px; max-height: 88vh;
-  background: #fff; border-radius: 20px 20px 0 0;
-  z-index: 201; overflow-y: auto;
+  position: fixed;
+  bottom: 0; left: 50%;
   transform: translateX(-50%) translateY(100%);
-  transition: transform .3s cubic-bezier(.4,0,.2,1);
+  width: 100%;
+  max-width: 480px;
+  background: #fff;
+  border-radius: 24px 24px 0 0;
+  padding: 0 0 env(safe-area-inset-bottom, 16px);
+  z-index: 101;
+  transition: transform .35s cubic-bezier(.32,.72,0,1);
+  max-height: 85vh;
+  overflow-y: auto;
 }
 .drawer.open { transform: translateX(-50%) translateY(0); }
+
 .drawer-handle {
-  width: 40px; height: 4px; background: #e0e0e0;
-  border-radius: 2px; margin: 12px auto 0;
+  width: 40px; height: 4px;
+  background: #ddd;
+  border-radius: 2px;
+  margin: 12px auto 0;
 }
 .drawer-header {
-  display: flex; align-items: center; gap: 12px;
-  padding: 12px 16px 8px;
+  padding: 16px 20px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: sticky;
+  top: 0;
+  background: #fff;
+  border-bottom: 1px solid #f0f0f0;
+  z-index: 1;
 }
-.drawer-icon { font-size: 28px; }
-.drawer-city-name { font-size: 20px; font-weight: 700; }
+.drawer-icon {
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+.drawer-city-name {
+  font-size: 20px;
+  font-weight: 800;
+}
 .drawer-close {
-  margin-left: auto; background: #f5f5f5; border: none;
-  border-radius: 50%; width: 30px; height: 30px;
-  font-size: 16px; cursor: pointer; color: #666;
+  margin-left: auto;
+  width: 30px; height: 30px;
+  background: #f5f5f5;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: #666;
+  display: flex; align-items: center; justify-content: center;
 }
-.drawer-body { padding: 0 0 120px; }
-.drawer-section-title {
-  font-size: 12px; color: #999; padding: 12px 16px 6px;
-  font-weight: 600; letter-spacing: .5px;
+.drawer-body { padding: 16px 20px 24px; }
+.section {
+  margin-bottom: 20px;
 }
-.drawer-item {
-  display: flex; align-items: center; gap: 8px;
-  padding: 8px 16px; cursor: pointer;
+.section-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #888;
+  letter-spacing: .5px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.section-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #f0f0f0;
+}
+.item-list { display: flex; flex-direction: column; gap: 8px; }
+.item-card {
+  background: #f8f9f8;
+  border-radius: 12px;
+  padding: 10px 14px;
+}
+.item-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a2a1a;
+  margin-bottom: 3px;
+}
+.item-note {
+  font-size: 12px;
+  color: #888;
+  line-height: 1.5;
+}
+.chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  background: #f0f4f0;
+  color: #3a5a3a;
+  font-size: 12px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-weight: 500;
+}
+
+/* 底部路线图例 */
+.legend {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  background: rgba(255,255,255,.92);
+  backdrop-filter: blur(8px);
+  padding: 10px 16px;
+  border-radius: 20px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.12);
+  z-index: 10;
+  max-width: calc(480px - 32px);
+  width: calc(100% - 32px);
+  justify-content: center;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #555;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 10px;
   transition: background .15s;
 }
-.drawer-item:active { background: #f5f5f5; }
-.drawer-item.checked { background: #e8f4e8; }
+.legend-item:hover { background: #f0f4f0; }
+.legend-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* 装饰背景格子 */
+.map-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(180,200,180,.15) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(180,200,180,.15) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+}
+/* 装饰路线 */
+.deco-road {
+  position: absolute;
+  background: rgba(200,210,200,.4);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+/* 距离标注 */
+.dist-badge {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255,255,255,.85);
+  border: 1px solid #ddeedd;
+  border-radius: 20px;
+  font-size: 10px;
+  color: #6b8c6b;
+  padding: 2px 8px;
+  z-index: 4;
+  white-space: nowrap;
+}
+
+/* drawer item styles */
+.drawer-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #888;
+  letter-spacing: .5px;
+  margin: 16px 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.drawer-section-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #f0f0f0;
+}
+.drawer-item {
+  background: #f8f9f8;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a2a1a;
+  margin-bottom: 6px;
+}
+.item-note {
+  display: block;
+  font-size: 12px;
+  color: #888;
+  font-weight: 400;
+  margin-top: 3px;
+  line-height: 1.5;
+}
+
+/* Step 5 mobile */
+body { background: #c8b89a; }
+.map-wrap { contain: layout; isolation: isolate; }
+.route-area { overflow: hidden; }
+
+/* ===== 勾选 / 留言 / AI 行程 ===== */
+.drawer-item {
+  position: relative; cursor: pointer; user-select: none;
+  display: flex; align-items: center; gap: 8px;
+  transition: background .15s;
+  padding: 6px 16px;
+  margin: 0;
+  border-radius: 0;
+}
+.drawer-item.checked { background: #e6f4e6; }
+.drawer-item:active { background: #f0f4f0; }
+.drawer-item-text { flex: 1; }
 .check-icon {
   width: 16px; height: 16px; flex-shrink: 0;
   border: 1.5px solid #d0d0d0; border-radius: 4px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 10px; color: transparent; transition: all .15s; background: #fff;
+  font-size: 10px; color: transparent; transition: all .15s;
+  background: #fff;
 }
-.drawer-item.checked .check-icon { border-color: #3a7a3a; background: #3a7a3a; color: #fff; }
-.drawer-item-text { flex: 1; font-size: 14px; color: #222; }
-.item-note { font-size: 12px; color: #999; margin-left: 6px; }
-
-/* ===== 留言 ===== */
-.comment-section { padding: 16px 16px 0; }
-.comment-section-title { font-size: 13px; font-weight: 700; color: #333; margin-bottom: 10px; }
-.comment-card { background: #f8f8f8; border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
+.drawer-item.checked .check-icon {
+  border-color: #3a7a3a; background: #3a7a3a; color: #fff;
+}
+.drawer-item.checked .check-icon { opacity: 1; }
+.ai-bar { position: sticky; bottom: 0; background: #fff; padding: 10px 16px 20px; border-top: 1px solid #f0f0f0; display: flex; gap: 8px; z-index: 10; }
+.ai-btn { flex: 1; background: #3a7a3a; color: #fff; border: none; border-radius: 20px; padding: 10px 0; font-size: 14px; font-weight: 600; cursor: pointer; }
+.ai-btn:disabled { background: #bbb; cursor: not-allowed; }
+.days-select { border: 1px solid #ddd; border-radius: 20px; padding: 8px 12px; font-size: 13px; background: #f8f8f8; }
+.comment-section-title { font-size: 13px; font-weight: 700; color: #888; letter-spacing: .5px; margin: 16px 0 8px; display: flex; align-items: center; gap: 6px; }
+.comment-section-title::after { content: ''; flex: 1; height: 1px; background: #f0f0f0; }
+.comment-card { background: #f8f9f8; border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; }
 .comment-meta { font-size: 11px; color: #aaa; margin-bottom: 4px; }
-.comment-text { font-size: 13px; color: #444; line-height: 1.6; }
-.comment-input {
-  width: 100%; border: 1px solid #e0e0e0; border-radius: 10px;
-  padding: 10px 12px; font-size: 14px; font-family: inherit;
-  resize: none; margin-top: 10px; outline: none;
-}
-.comment-submit {
-  float: right; margin-top: 8px; background: #3a7a3a; color: #fff;
-  border: none; border-radius: 20px; padding: 7px 20px;
-  font-size: 13px; cursor: pointer;
-}
-.login-bar {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 0; font-size: 13px; color: #888; margin-top: 8px;
-}
-.login-btn {
-  background: #3a7a3a; color: #fff; border: none;
-  border-radius: 16px; padding: 6px 16px; font-size: 12px; cursor: pointer;
-}
-
-/* ===== 昵称弹窗 ===== */
-.username-modal-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,.5);
-  z-index: 300; display: none; align-items: flex-end; justify-content: center;
-}
-.username-modal-overlay.open { display: flex; }
-.username-modal {
-  background: #fff; border-radius: 20px 20px 0 0;
-  width: 100%; max-width: 480px; padding: 24px 20px 40px;
-}
-.username-modal input {
-  width: 100%; border: 1px solid #ddd; border-radius: 10px;
-  padding: 10px 14px; font-size: 15px; margin: 12px 0;
-  font-family: inherit; outline: none;
-}
-.username-modal button {
-  width: 100%; background: #3a7a3a; color: #fff;
-  border: none; border-radius: 16px; padding: 12px;
-  font-size: 15px; cursor: pointer;
-}
-.username-modal-title { font-size: 17px; font-weight: 700; }
-
-/* ===== AI 弹窗 ===== */
-.ai-modal-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,.5);
-  z-index: 300; display: none; align-items: flex-end; justify-content: center;
-}
+.comment-meta b { color: #555; }
+.comment-text { font-size: 13px; color: #333; line-height: 1.6; }
+.comment-input { width: 100%; border: 1px solid #ddd; border-radius: 10px; padding: 8px 12px; font-size: 13px; resize: none; font-family: inherit; margin-bottom: 8px; display: block; }
+.comment-submit { background: #3a7a3a; color: #fff; border: none; border-radius: 16px; padding: 7px 20px; font-size: 13px; cursor: pointer; float: right; }
+.login-bar { background: #f0f4f0; border-radius: 10px; padding: 10px 14px; font-size: 13px; color: #555; display: flex; align-items: center; justify-content: space-between; }
+.login-btn { background: #3a7a3a; color: #fff; border: none; border-radius: 12px; padding: 5px 14px; font-size: 12px; cursor: pointer; }
+.ai-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 200; display: none; align-items: flex-end; justify-content: center; }
 .ai-modal-overlay.open { display: flex; }
-.ai-modal {
-  background: #fff; border-radius: 20px 20px 0 0;
-  width: 100%; max-width: 480px; padding: 20px 16px 40px;
-  max-height: 90vh; display: flex; flex-direction: column;
-}
-.ai-modal-title { font-size: 17px; font-weight: 700; flex-shrink: 0; }
-.ai-modal-close {
-  float: right; background: #f5f5f5; border: none;
-  border-radius: 50%; width: 30px; height: 30px;
-  font-size: 16px; cursor: pointer; color: #666;
-}
-.ai-modal-body { overflow-y: auto; flex: 1; padding: 12px 0 8px; }
+.ai-modal { background: #fff; border-radius: 20px 20px 0 0; width: 100%; max-width: 480px; max-height: 80vh; overflow-y: auto; padding: 20px 20px 40px; }
+.ai-modal-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; color: #1a2a1a; }
+.ai-modal-body { font-size: 13px; line-height: 1.8; color: #333; white-space: pre-wrap; }
+.ai-modal-close { float: right; background: none; border: none; font-size: 20px; cursor: pointer; color: #888; }
+.username-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 300; display: none; align-items: center; justify-content: center; }
+.username-modal-overlay.open { display: flex; }
+.username-modal { background: #fff; border-radius: 16px; padding: 24px 20px; width: 280px; text-align: center; }
+.username-modal h3 { font-size: 16px; margin-bottom: 8px; }
+.username-modal p { font-size: 12px; color: #888; margin-bottom: 16px; }
+.username-modal input { width: 100%; border: 1px solid #ddd; border-radius: 10px; padding: 9px 12px; font-size: 14px; margin-bottom: 12px; font-family: inherit; }
+.username-modal .uname-btn { width: 100%; background: #3a7a3a; color: #fff; border: none; border-radius: 12px; padding: 10px; font-size: 14px; cursor: pointer; }
 
-/* ===== 全局行程按钮 ===== */
+
+/* 全局行程按钮 */
 .global-plan-btn {
   position: fixed; bottom: 28px; right: 20px; z-index: 50;
   background: #3a7a3a; color: #fff;
@@ -181,6 +469,7 @@ body {
   padding: 12px 20px; font-size: 14px; font-weight: 700;
   box-shadow: 0 4px 16px rgba(58,122,58,.4);
   cursor: pointer; display: none; align-items: center; gap: 8px;
+  transition: transform .15s;
 }
 .global-plan-btn:active { transform: scale(.96); }
 .global-plan-badge {
@@ -188,7 +477,7 @@ body {
   border-radius: 10px; padding: 1px 7px; font-size: 12px;
 }
 
-/* ===== 行程信息收集弹窗 ===== */
+/* 行程信息收集弹窗 */
 .plan-form-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,.5);
   z-index: 250; display: none; align-items: flex-end; justify-content: center;
@@ -203,7 +492,7 @@ body {
 .plan-form-label { font-size: 13px; color: #666; margin-bottom: 6px; display: block; }
 .plan-form-input {
   width: 100%; border: 1px solid #ddd; border-radius: 10px;
-  padding: 10px 14px; font-size: 14px; font-family: inherit; outline: none;
+  padding: 10px 14px; font-size: 14px; font-family: inherit;
 }
 .plan-form-submit {
   width: 100%; background: #3a7a3a; color: #fff; border: none;
@@ -212,19 +501,215 @@ body {
 }
 .plan-form-close {
   float: right; background: none; border: none;
-  font-size: 22px; cursor: pointer; color: #888;
+  font-size: 20px; cursor: pointer; color: #888; margin-top: -4px;
 }
+
+/* AI 行程弹窗滚动 */
+.ai-modal-body { overflow-y: auto; max-height: 65vh; padding-bottom: 8px; }
+
+
+/* ===== 省份 Tab ===== */
+.province-tabs {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(255,255,255,.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(0,0,0,.06);
+  display: flex; overflow-x: auto; padding: 0 8px;
+  scrollbar-width: none;
+}
+.province-tabs::-webkit-scrollbar { display: none; }
+.province-tab {
+  flex-shrink: 0; padding: 11px 14px; font-size: 14px;
+  color: #888; cursor: pointer;
+  border-bottom: 2.5px solid transparent;
+  transition: all .2s; white-space: nowrap;
+  font-weight: 500;
+}
+.province-tab.active { color: #3a7a3a; border-bottom-color: #3a7a3a; font-weight: 700; }
+
+/* ===== 省份页面 ===== */
+.province-page { display: none; }
+.province-page.active { display: block; }
+
+/* ===== 待上线省份占位 ===== */
+.coming-soon {
+  text-align: center; padding: 80px 20px;
+  min-height: 100vh; background: inherit;
+}
+
 </style>
 </head>
 <body>
 
 <!-- 省份 Tab -->
-<div class="province-tabs" id="provinceTabs"></div>
+<div class="province-tabs" id="provinceTabs">
+  <div class="province-tab active" data-key="shanxi" onclick="switchProvince('shanxi')">🏯 山西</div>
+  <div class="province-tab" data-key="yunnan" onclick="switchProvince('yunnan')">🌸 云南</div>
+  <div class="province-tab" data-key="gansu" onclick="switchProvince('gansu')">🏜 甘肃</div>
+</div>
 
-<!-- 省份内容区 -->
-<div id="provincePages"></div>
+<!-- 山西（完整地图路线） -->
+<div class="province-page active" id="page-shanxi">
+<div class="map-wrap" id="mapWrap">
 
-<!-- 抽屉 -->
+  <!-- 地图背景装饰 -->
+  <div class="map-grid"></div>
+  <!-- 装饰横路 -->
+  <div class="deco-road" style="top:18%;left:0;width:35%;height:6px;opacity:.5;transform:rotate(-3deg)"></div>
+  <div class="deco-road" style="top:38%;right:0;width:28%;height:5px;opacity:.4;transform:rotate(5deg)"></div>
+  <div class="deco-road" style="top:58%;left:5%;width:30%;height:5px;opacity:.4;transform:rotate(-2deg)"></div>
+  <div class="deco-road" style="top:76%;right:5%;width:25%;height:5px;opacity:.4;transform:rotate(3deg)"></div>
+  <!-- 装饰水域 -->
+  <div style="position:absolute;top:52%;right:8%;width:60px;height:30px;background:rgba(150,190,220,.25);border-radius:50%;transform:rotate(-10deg);pointer-events:none"></div>
+  <div style="position:absolute;top:82%;left:10%;width:50px;height:24px;background:rgba(150,190,220,.2);border-radius:50%;transform:rotate(5deg);pointer-events:none"></div>
+
+  <!-- 顶栏 -->
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">🏔 山西好风光</div>
+      <div class="topbar-sub">从北往南的旅行地图</div>
+    </div>
+    <div class="topbar-badge">5座城市</div>
+  </div>
+
+  <!-- 路线 -->
+  <div class="route-area" id="routeArea">
+    <div class="route-line"></div>
+
+    <!-- 大同 -->
+    <div class="spacer" style="height:24px"></div>
+    <div class="city-row" id="row-datong">
+      <div class="city-card" onclick="openDrawer('datong')">
+        <div class="card-name name-datong">大同</div>
+        <div>
+          <span class="card-tag tag-food">🍜 吃</span>
+          <span class="card-tag tag-play">🏛 游</span>
+          <span class="card-tag tag-buy">🛍 买</span>
+        </div>
+        <div class="card-hint">云冈石窟 · 悬空寺 · 雁门关</div>
+      </div>
+      <div style="flex:1"></div>
+    </div>
+    <div class="city-dot dot-datong" style="top:0" onclick="openDrawer('datong')"></div>
+
+    <!-- 距离标注 -->
+    <div class="spacer" style="height:40px;position:relative">
+      <div class="dist-badge" style="top:14px">↓ 约 160km · 忻州</div>
+    </div>
+
+    <!-- 忻州 -->
+    <div class="city-row right" id="row-xinzhou">
+      <div class="city-card" onclick="openDrawer('xinzhou')">
+        <div class="card-name name-xinzhou">忻州</div>
+        <div>
+          <span class="card-tag tag-food">🥣 吃</span>
+          <span class="card-tag tag-play">🏔 游</span>
+        </div>
+        <div class="card-hint">芦芽山 · 忻州古城 · 温泉</div>
+      </div>
+      <div style="flex:1"></div>
+    </div>
+    <div class="city-dot dot-xinzhou" style="top:0" onclick="openDrawer('xinzhou')"></div>
+
+    <div class="spacer" style="height:40px;position:relative">
+      <div class="dist-badge" style="top:14px">↓ 约 100km · 太原</div>
+    </div>
+
+    <!-- 太原 -->
+    <div class="city-row" id="row-taiyuan">
+      <div class="city-card" onclick="openDrawer('taiyuan')">
+        <div class="card-name name-taiyuan">太原</div>
+        <div>
+          <span class="card-tag tag-food">🔪 吃</span>
+          <span class="card-tag tag-play">🏛 游</span>
+        </div>
+        <div class="card-hint">晋祠 · 省博 · 王家大院</div>
+      </div>
+      <div style="flex:1"></div>
+    </div>
+    <div class="city-dot dot-taiyuan" style="top:0" onclick="openDrawer('taiyuan')"></div>
+
+    <div class="spacer" style="height:40px;position:relative">
+      <div class="dist-badge" style="top:14px">↓ 约 170km · 临汾</div>
+    </div>
+
+    <!-- 临汾 -->
+    <div class="city-row right" id="row-linfen">
+      <div class="city-card" onclick="openDrawer('linfen')">
+        <div class="card-name name-linfen">临汾</div>
+        <div>
+          <span class="card-tag tag-food">🍎 吃</span>
+          <span class="card-tag tag-play">💧 游</span>
+        </div>
+        <div class="card-hint">壶口瀑布 · 小西天 · 飞虹塔</div>
+      </div>
+      <div style="flex:1"></div>
+    </div>
+    <div class="city-dot dot-linfen" style="top:0" onclick="openDrawer('linfen')"></div>
+
+    <div class="spacer" style="height:40px;position:relative">
+      <div class="dist-badge" style="top:14px">↓ 约 130km · 运城</div>
+    </div>
+
+    <!-- 运城 -->
+    <div class="city-row" id="row-yuncheng">
+      <div class="city-card" onclick="openDrawer('yuncheng')">
+        <div class="card-name name-yuncheng">运城</div>
+        <div>
+          <span class="card-tag tag-food">🍗 吃</span>
+          <span class="card-tag tag-play">🧂 游</span>
+        </div>
+        <div class="card-hint">盐湖 · 永乐宫 · 关公圣像</div>
+      </div>
+      <div style="flex:1"></div>
+    </div>
+    <div class="city-dot dot-yuncheng" style="top:0" onclick="openDrawer('yuncheng')"></div>
+
+    <div class="spacer" style="height:80px"></div>
+  </div>
+
+  <!-- 底部图例 -->
+  <div class="legend">
+    <div class="legend-item" onclick="openDrawer('datong')">
+      <div class="legend-dot" style="background:#e8754a"></div>大同
+    </div>
+    <div class="legend-item" onclick="openDrawer('xinzhou')">
+      <div class="legend-dot" style="background:#4a9be8"></div>忻州
+    </div>
+    <div class="legend-item" onclick="openDrawer('taiyuan')">
+      <div class="legend-dot" style="background:#e8b84a"></div>太原
+    </div>
+    <div class="legend-item" onclick="openDrawer('linfen')">
+      <div class="legend-dot" style="background:#7ab84a"></div>临汾
+    </div>
+    <div class="legend-item" onclick="openDrawer('yuncheng')">
+      <div class="legend-dot" style="background:#e84a6f"></div>运城
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- 云南（待上线） -->
+<div class="province-page" id="page-yunnan">
+  <div class="coming-soon" style="background:#f0eefc">
+    <div style="font-size:56px;margin-bottom:16px">🌸</div>
+    <div style="font-size:18px;font-weight:700;color:#333;margin-bottom:8px">云南攻略</div>
+    <div style="font-size:13px;color:#aaa">大理 · 丽江 · 西双版纳 · 香格里拉</div>
+    <div style="font-size:12px;color:#bbb;margin-top:16px">内容整理中，敬请期待～</div>
+  </div>
+</div>
+
+<!-- 甘肃（待上线） -->
+<div class="province-page" id="page-gansu">
+  <div class="coming-soon" style="background:#fdf0e8">
+    <div style="font-size:56px;margin-bottom:16px">🏜</div>
+    <div style="font-size:18px;font-weight:700;color:#333;margin-bottom:8px">甘肃攻略</div>
+    <div style="font-size:13px;color:#aaa">敦煌 · 张掖 · 嘉峪关 · 兰州</div>
+    <div style="font-size:12px;color:#bbb;margin-top:16px">内容整理中，敬请期待～</div>
+  </div>
+</div>
+
+<!-- 详情抽屉 -->
 <div class="drawer-overlay" id="overlay" onclick="closeDrawer()"></div>
 <div class="drawer" id="drawer">
   <div class="drawer-handle"></div>
@@ -236,26 +721,8 @@ body {
     <button class="drawer-close" onclick="closeDrawer()">✕</button>
   </div>
   <div class="drawer-body" id="drawerBody"></div>
-</div>
 
-<!-- 昵称弹窗 -->
-<div class="username-modal-overlay" id="usernameModalOverlay">
-  <div class="username-modal">
-    <div class="username-modal-title">设置你的昵称</div>
-    <input id="usernameInput" maxlength="20" placeholder="最多20个字符">
-    <button onclick="saveUsername()">确认</button>
-  </div>
-</div>
-
-<!-- AI 结果弹窗 -->
-<div class="ai-modal-overlay" id="aiModalOverlay">
-  <div class="ai-modal">
-    <div style="display:flex;align-items:center;margin-bottom:4px">
-      <button class="ai-modal-close" onclick="closeAiModal()">✕</button>
-      <div class="ai-modal-title" id="aiModalTitle">AI 行程规划</div>
-    </div>
-    <div class="ai-modal-body" id="aiModalBody"></div>
-  </div>
+  <div style="padding:0 16px 16px" id="commentSection"></div>
 </div>
 
 <!-- 全局行程按钮 -->
@@ -286,296 +753,188 @@ body {
 </div>
 
 <script>
-/* ========== 省份数据 ========== */
-const PROVINCES = [
-  {
-    key: 'shanxi',
-    name: '山西',
-    emoji: '🏯',
-    bgColor: '#eef2eb',
-    cities: [
-      {
-        key: 'datong', name: '大同', color: '#e8754a',
-        icon: '🏛', hint: '云冈石窟 · 悬空寺 · 雁门关',
-        food: [
-          { name: '齐家疙瘩汤', note: '推荐开花黄馍馍' },
-          { name: '弘雅饭店', note: '' },
-          { name: '凯鸽酒楼', note: '早点去，必点鲜榨沙棘汁+黄米凉糕' },
-          { name: '龙聚祥烧麦馆', note: '点奶皮子卷' },
-          { name: '小媳妇凉粉', note: '' },
-          { name: '浑源县城', note: '去悬空寺路上，吃浑源凉粉、莜面' },
-        ],
-        stay: [
-          { name: '花园酒店', note: '' },
-          { name: '王夫至尊酒店', note: '' },
-        ],
-        play: [
-          { name: '华严寺', note: '' },
-          { name: '云冈石窟', note: '一定要请讲解，或提前看纪录片；推荐3号洞窟附近文创亭子' },
-          { name: '大同美术馆', note: '' },
-          { name: '悬空寺', note: '建议包车' },
-          { name: '应县木塔', note: '建议包车' },
-          { name: '代县·雁门关', note: '建议包车' },
-        ],
-        buy: [
-          { name: '华严寺周边', note: '' },
-          { name: '云冈石窟文创', note: '3号洞窟附近文创亭，货更全' },
-        ],
-      },
-      {
-        key: 'xinzhou', name: '忻州', color: '#4a9be8',
-        icon: '🏔', hint: '芦芽山 · 忻州古城 · 温泉',
-        food: [
-          { name: '碗托', note: '' },
-          { name: '真味居一部', note: '点焖面' },
-          { name: '公园街夜市·荞面河捞', note: '' },
-          { name: '利民中街眼镜烧烤·肉饼大王肉夹馍', note: '' },
-          { name: '彩虹饭店', note: '鳌鱼过油肉' },
-          { name: '和禾拉面', note: '早餐推荐' },
-        ],
-        play: [
-          { name: '芦芽山·后马伦村', note: '像新疆的景色' },
-          { name: '忻州古城', note: '' },
-          { name: '温泉', note: '可以泡温泉' },
-        ],
-      },
-      {
-        key: 'taiyuan', name: '太原', color: '#e8b84a',
-        icon: '🔪', hint: '晋祠 · 省博 · 王家大院',
-        food: [
-          { name: '剔尖面', note: '' },
-          { name: '打卤面', note: '' },
-          { name: '刀削面', note: '' },
-          { name: '御河伍号', note: '茴香白玉丝+沙棘醪糟汤+海皇豆腐煲+醋溜丸子' },
-          { name: '好天地饭庄', note: '' },
-          { name: '炒不烂子', note: '' },
-          { name: '灌肠', note: '' },
-          { name: '南九斤面皮', note: '' },
-          { name: '蘸串串', note: '' },
-          { name: '酸甜麻辣拌', note: '' },
-          { name: '沾片子', note: '' },
-        ],
-        play: [
-          { name: '晋祠', note: '' },
-          { name: '山西省博物馆', note: '' },
-          { name: '太原植物园', note: '' },
-          { name: '榆次·常家庄园', note: '建议包车' },
-          { name: '王家大院', note: '建议包车' },
-        ],
-      },
-      {
-        key: 'linfen', name: '临汾', color: '#7ab84a',
-        icon: '💧', hint: '壶口瀑布 · 小西天 · 飞虹塔',
-        food: [
-          { name: '吉县苹果', note: '' },
-          { name: '隰县梨', note: '' },
-          { name: '白家牛肉丸子面', note: '' },
-          { name: '臻火候饼墩墩', note: '' },
-        ],
-        play: [
-          { name: '小西天', note: '' },
-          { name: '壶口瀑布', note: '' },
-          { name: '广胜寺·飞虹塔', note: '' },
-        ],
-      },
-      {
-        key: 'yuncheng', name: '运城', color: '#e84a6f',
-        icon: '🧂', hint: '盐湖 · 永乐宫 · 关公圣像',
-        food: [
-          { name: '星河摇滚炒鸡（总店）', note: '' },
-          { name: '焦圈', note: '' },
-          { name: '枣蛋', note: '' },
-          { name: '黄河夜市', note: '老王烧烤运城凉菜、麻辣串、孜然炒面、茶汤' },
-          { name: '雪花酪', note: '' },
-          { name: '张氏北相羊肉胡卜（八一总店）', note: '吃羊肉胡卜+蒜爆羊肚' },
-        ],
-        play: [
-          { name: '关公圣像', note: '' },
-          { name: '盐湖', note: '' },
-          { name: '关帝庙', note: '' },
-          { name: '芮城·永乐宫', note: '周边景点' },
-        ],
-      },
-    ]
-  },
-  // ===== 云南（待填）=====
-  {
-    key: 'yunnan',
-    name: '云南',
-    emoji: '🌸',
-    bgColor: '#f0eefc',
-    cities: [
-      // { key: 'kunming', name: '昆明', color: '#8a6ae8', icon: '🌺', hint: '滇池 · 石林 · 翠湖', food: [], play: [] },
-      // 待填充...
-    ]
-  },
-  // ===== 甘肃（待填）=====
-  {
-    key: 'gansu',
-    name: '甘肃',
-    emoji: '🏜',
-    bgColor: '#fdf0e8',
-    cities: [
-      // { key: 'dunhuang', name: '敦煌', color: '#e8a03a', icon: '🐫', hint: '莫高窟 · 鸣沙山 · 月牙泉', food: [], play: [] },
-      // 待填充...
-    ]
-  },
-];
 
-/* ========== 全局状态 ========== */
-var checkedItems = JSON.parse(localStorage.getItem('travel_checked') || '{}');
-var username = localStorage.getItem('travel_username') || '';
-var currentCityKey = '';
-var currentCityName = '';
-var currentProvinceKey = '';
+/* ========== 数据 ========== */
+const drawerData = {
+  datong: {
+    name: '大同', color: '#e8754a',
+    food: [
+      { name: '齐家疙瘩汤', note: '推荐开花黄馍馍' },
+      { name: '弘雅饭店', note: '' },
+      { name: '凯鸽酒楼', note: '早点去，必点鲜榨沙棘汁+黄米凉糕' },
+      { name: '龙聚祥烧麦馆', note: '点奶皮子卷' },
+      { name: '小媳妇凉粉', note: '' },
+      { name: '浑源县城', note: '去悬空寺路上，吃浑源凉粉、莜面' },
+    ],
+    stay: [
+      { name: '花园酒店', note: '' },
+      { name: '王夫至尊酒店', note: '' },
+    ],
+    play: [
+      { name: '华严寺', note: '' },
+      { name: '云冈石窟', note: '一定要请讲解，或提前看纪录片；推荐3号洞窟附近文创亭子' },
+      { name: '大同美术馆', note: '' },
+      { name: '悬空寺', note: '建议包车' },
+      { name: '应县木塔', note: '建议包车' },
+      { name: '代县·雁门关', note: '建议包车' },
+    ],
+    buy: [
+      { name: '华严寺周边', note: '' },
+      { name: '云冈石窟文创', note: '3号洞窟附近文创亭，货更全' },
+    ],
+    hint: '云冈石窟 · 悬空寺 · 雁门关',
+  },
+  xinzhou: {
+    name: '忻州', color: '#4a9be8',
+    food: [
+      { name: '碗托', note: '' },
+      { name: '真味居一部', note: '点焖面' },
+      { name: '公园街夜市·荞面河捞', note: '' },
+      { name: '利民中街眼镜烧烤·肉饼大王肉夹馍', note: '' },
+      { name: '彩虹饭店', note: '鳌鱼过油肉' },
+      { name: '和禾拉面', note: '早餐推荐' },
+    ],
+    play: [
+      { name: '芦芽山·后马伦村', note: '像新疆的景色' },
+      { name: '忻州古城', note: '' },
+      { name: '温泉', note: '可以泡温泉' },
+    ],
+    hint: '芦芽山 · 忻州古城 · 温泉',
+  },
+  taiyuan: {
+    name: '太原', color: '#e8b84a',
+    food: [
+      { name: '剔尖面', note: '' },
+      { name: '打卤面', note: '' },
+      { name: '刀削面', note: '' },
+      { name: '御河伍号', note: '茴香白玉丝+沙棘醪糟汤+海皇豆腐煲+醋溜丸子' },
+      { name: '好天地饭庄', note: '' },
+      { name: '炒不烂子', note: '' },
+      { name: '灌肠', note: '' },
+      { name: '南九斤面皮', note: '' },
+      { name: '蘸串串', note: '' },
+      { name: '酸甜麻辣拌', note: '' },
+      { name: '沾片子', note: '' },
+    ],
+    play: [
+      { name: '晋祠', note: '' },
+      { name: '山西省博物馆', note: '' },
+      { name: '太原植物园', note: '' },
+      { name: '榆次·常家庄园', note: '建议包车' },
+      { name: '王家大院', note: '建议包车' },
+    ],
+    hint: '晋祠 · 省博 · 王家大院',
+  },
+  linfen: {
+    name: '临汾', color: '#7ab84a',
+    food: [
+      { name: '吉县苹果', note: '' },
+      { name: '隰县梨', note: '' },
+      { name: '白家牛肉丸子面', note: '' },
+      { name: '臻火候饼墩墩', note: '' },
+    ],
+    play: [
+      { name: '小西天', note: '' },
+      { name: '壶口瀑布', note: '' },
+      { name: '广胜寺·飞虹塔', note: '' },
+    ],
+    hint: '壶口瀑布 · 小西天 · 飞虹塔',
+  },
+  yuncheng: {
+    name: '运城', color: '#e84a6f',
+    food: [
+      { name: '星河摇滚炒鸡（总店）', note: '' },
+      { name: '焦圈', note: '' },
+      { name: '枣蛋', note: '' },
+      { name: '黄河夜市', note: '老王烧烤运城凉菜、麻辣串、孜然炒面、茶汤' },
+      { name: '雪花酪', note: '' },
+      { name: '张氏北相羊肉胡卜（八一总店）', note: '吃羊肉胡卜+蒜爆羊肚' },
+    ],
+    play: [
+      { name: '关公圣像', note: '' },
+      { name: '盐湖', note: '' },
+      { name: '关帝庙', note: '' },
+      { name: '芮城·永乐宫', note: '周边景点' },
+    ],
+    hint: '盐湖 · 永乐宫 · 关公圣像',
+  },
+};
+
+/* ========== 状态 ========== */
 var SUPABASE_URL = 'https://eptyoxqgwpgjfpfhmqgi.supabase.co';
 var SUPABASE_KEY = 'sb_publishable_z-6Rva9F75H3mzvgp9TEwA_9dKa7IwE';
 var DEEPSEEK_KEY = 'sk-99dcae7b1be2436dbe16e254b227ae16';
+var currentCityKey = '';
+var currentCityName = '';
+var checkedItems = JSON.parse(localStorage.getItem('shanxi_checked') || '{}');
+var username = localStorage.getItem('shanxi_username') || '';
 
-/* ========== 初始化省份 Tab 和页面 ========== */
-function initProvinces() {
-  var tabsEl = document.getElementById('provinceTabs');
-  var pagesEl = document.getElementById('provincePages');
+/* ========== 勾选 ========== */
+function ckKey(cityKey, section, name) {
+  return cityKey + ':' + section + ':' + name;
+}
+function toggleCheck(cityKey, section, name, el) {
+  var key = ckKey(cityKey, section, name);
+  if (checkedItems[key]) { delete checkedItems[key]; el.classList.remove('checked'); }
+  else { checkedItems[key] = true; el.classList.add('checked'); }
+  localStorage.setItem('shanxi_checked', JSON.stringify(checkedItems));
+}
 
-  PROVINCES.forEach(function(prov, i) {
-    // Tab
-    var tab = document.createElement('div');
-    tab.className = 'province-tab' + (i === 0 ? ' active' : '');
-    tab.textContent = prov.emoji + ' ' + prov.name;
-    tab.onclick = function() { switchProvince(prov.key); };
-    tab.dataset.key = prov.key;
-    tabsEl.appendChild(tab);
-
-    // 页面
-    var page = document.createElement('div');
-    page.className = 'province-page' + (i === 0 ? ' active' : '');
-    page.id = 'page-' + prov.key;
-    page.style.background = prov.bgColor;
-    page.style.minHeight = '100vh';
-
-    if (!prov.cities.length) {
-      page.innerHTML = '<div style="text-align:center;padding:60px 20px;color:#aaa"><div style="font-size:48px;margin-bottom:16px">' + prov.emoji + '</div><div style="font-size:16px">' + prov.name + ' 攻略即将上线</div><div style="font-size:13px;margin-top:8px">敬请期待～</div></div>';
-    } else {
-      var html = '<div class="city-list">';
-      prov.cities.forEach(function(city) {
-        html += '<div class="city-card" onclick="openDrawer(\'' + prov.key + '\',\'' + city.key + '\')">';
-        html += '<div class="city-header">';
-        html += '<div class="city-dot" style="background:' + city.color + '"></div>';
-        html += '<div><div class="city-name">' + city.name + '</div>';
-        if (city.hint) html += '<div class="city-hint">' + city.hint + '</div>';
-        html += '</div><div class="city-arrow">›</div></div>';
-        html += '<div class="city-tags">';
-        if (city.food && city.food.length) html += '<span class="city-tag">🍜 ' + city.food.length + '个美食</span>';
-        if (city.play && city.play.length) html += '<span class="city-tag">🗺 ' + city.play.length + '个景点</span>';
-        if (city.stay && city.stay.length) html += '<span class="city-tag">🏨 ' + city.stay.length + '个住宿</span>';
-        if (city.buy && city.buy.length) html += '<span class="city-tag">🛍 ' + city.buy.length + '个好物</span>';
-        html += '</div></div>';
-      });
-      html += '</div>';
-      page.innerHTML = html;
-    }
-    pagesEl.appendChild(page);
+/* ========== 渲染抽屉内容 ========== */
+function renderSection(cityKey, icon, label, items, section) {
+  if (!items || !items.length) return '';
+  var s = '<div class="drawer-section-title">' + icon + ' ' + label + '</div>';
+  items.forEach(function(item) {
+    var key = ckKey(cityKey, section, item.name);
+    var cls = checkedItems[key] ? ' checked' : '';
+    s += '<div class="drawer-item' + cls + '" data-city="' + cityKey + '" data-section="' + section + '" data-name="' + item.name.replace(/"/g,'&quot;') + '">';
+    s += '<span class="check-icon">✓</span>';
+    s += '<div class="drawer-item-text">' + item.name + (item.note ? '<span class="item-note">' + item.note + '</span>' : '') + '</div>';
+    s += '</div>';
   });
+  return s;
 }
-
-function switchProvince(key) {
-  document.querySelectorAll('.province-tab').forEach(function(t) {
-    t.classList.toggle('active', t.dataset.key === key);
-  });
-  document.querySelectorAll('.province-page').forEach(function(p) {
-    p.classList.toggle('active', p.id === 'page-' + key);
-  });
-}
-
-/* ========== 抽屉 ========== */
-function openDrawer(provKey, cityKey) {
-  var prov = PROVINCES.find(function(p) { return p.key === provKey; });
-  if (!prov) return;
-  var city = prov.cities.find(function(c) { return c.key === cityKey; });
-  if (!city) return;
-
-  currentProvinceKey = provKey;
-  currentCityKey = provKey + ':' + cityKey;
-  currentCityName = city.name;
-
-  document.getElementById('drawerIcon').textContent = city.icon || '📍';
-  document.getElementById('drawerName').textContent = city.name;
-  document.getElementById('drawerName').style.color = city.color;
-
-  renderDrawerItems(provKey, cityKey, city);
-  document.getElementById('overlay').classList.add('open');
-  document.getElementById('drawer').classList.add('open');
-}
-
-function closeDrawer() {
-  document.getElementById('overlay').classList.remove('open');
-  document.getElementById('drawer').classList.remove('open');
-}
-
-function renderDrawerItems(provKey, cityKey, city) {
-  var sections = [
-    { key: 'food', label: '🍜 吃', items: city.food },
-    { key: 'play', label: '🗺 游', items: city.play },
-    { key: 'stay', label: '🏨 住', items: city.stay },
-    { key: 'buy', label: '🛍 买', items: city.buy },
-  ];
+function renderDrawerItems(cityKey, city) {
   var html = '';
-  sections.forEach(function(sec) {
-    if (!sec.items || !sec.items.length) return;
-    html += '<div class="drawer-section-title">' + sec.label + '</div>';
-    sec.items.forEach(function(item) {
-      var ck = currentCityKey + ':' + sec.key + ':' + item.name;
-      var cls = checkedItems[ck] ? ' checked' : '';
-      html += '<div class="drawer-item' + cls + '" data-ck="' + ck.replace(/"/g,'&quot;') + '">';
-      html += '<span class="check-icon">✓</span>';
-      html += '<div class="drawer-item-text">' + item.name;
-      if (item.note) html += '<span class="item-note">' + item.note + '</span>';
-      html += '</div></div>';
-    });
-  });
-  var body = document.getElementById('drawerBody');
-  body.innerHTML = html;
-
-  // 事件委托勾选
-  body.onclick = function(e) {
+  html += renderSection(cityKey, '🍜', '吃', city.food, 'food');
+  html += renderSection(cityKey, '🗺', '游', city.play, 'play');
+  html += renderSection(cityKey, '🏨', '住', city.stay, 'stay');
+  html += renderSection(cityKey, '🛍', '买', city.buy, 'buy');
+  document.getElementById('drawerBody').innerHTML = html;
+  document.getElementById('drawerBody').onclick = function(e) {
     var el = e.target.closest('.drawer-item');
     if (!el) return;
-    var ck = el.dataset.ck;
-    if (checkedItems[ck]) { delete checkedItems[ck]; el.classList.remove('checked'); }
-    else { checkedItems[ck] = true; el.classList.add('checked'); }
-    localStorage.setItem('travel_checked', JSON.stringify(checkedItems));
+    var city = el.dataset.city;
+    var section = el.dataset.section;
+    var name = el.dataset.name;
+    var key = city + ':' + section + ':' + name;
+    if (checkedItems[key]) { delete checkedItems[key]; el.classList.remove('checked'); }
+    else { checkedItems[key] = true; el.classList.add('checked'); }
+    localStorage.setItem('shanxi_checked', JSON.stringify(checkedItems));
     updateGlobalBadge();
   };
-
-  // 留言区
-  html += '<div class="comment-section" id="commentSection"></div>';
-  body.innerHTML = html;
-  body.onclick = function(e) {
-    var el = e.target.closest('.drawer-item');
-    if (!el) return;
-    var ck = el.dataset.ck;
-    if (checkedItems[ck]) { delete checkedItems[ck]; el.classList.remove('checked'); }
-    else { checkedItems[ck] = true; el.classList.add('checked'); }
-    localStorage.setItem('travel_checked', JSON.stringify(checkedItems));
-    updateGlobalBadge();
-  };
-  renderComments(provKey + ':' + cityKey);
 }
 
 /* ========== 留言 ========== */
 function renderComments(cityKey) {
   var section = document.getElementById('commentSection');
-  if (!section) return;
-  var formHtml = '<div class="comment-section-title">💬 旅行者留言</div>';
-  formHtml += '<div id="commentList"><div style="color:#aaa;font-size:12px;padding:4px 0 8px">加载中...</div></div>';
-  if (username) {
-    formHtml += '<textarea class="comment-input" id="commentText" rows="3" placeholder="分享你的旅行经验..."></textarea>';
-    formHtml += '<button class="comment-submit" id="commentSubmitBtn" onclick="submitComment()">发布</button>';
-    formHtml += '<div style="clear:both;font-size:11px;color:#bbb;margin-top:8px">昵称：' + username + ' <span style="color:#3a7a3a;cursor:pointer" onclick="showUsernameModal()">修改</span></div>';
-  } else {
-    formHtml += '<div class="login-bar">设置昵称后可以留言<button class="login-btn" onclick="showUsernameModal()">设置昵称</button></div>';
+
+  // 立即渲染输入框，不等网络
+  function buildForm() {
+    var html = '<div class="comment-section-title">💬 旅行者留言</div>';
+    html += '<div id="commentList"><div style="color:#aaa;font-size:12px;padding:4px 0 8px">留言加载中...</div></div>';
+    if (username) {
+      html += '<textarea class="comment-input" id="commentText" rows="3" placeholder="分享你的旅行经验..."></textarea>';
+      html += '<button class="comment-submit" id="commentSubmitBtn" onclick="submitComment()">发布</button>';
+      html += '<div style="clear:both;font-size:11px;color:#bbb;margin-top:8px">昵称：' + username + ' <span style="color:#3a7a3a;cursor:pointer" onclick="showUsernameModal()">修改</span></div>';
+    } else {
+      html += '<div class="login-bar">设置昵称后可以留言<button class="login-btn" onclick="showUsernameModal()">设置昵称</button></div>';
+    }
+    return html;
   }
-  section.innerHTML = formHtml;
+  section.innerHTML = buildForm();
+
+  // 异步加载历史留言
   loadCommentList(cityKey);
 }
 
@@ -584,26 +943,41 @@ function loadCommentList(cityKey) {
   if (!list) return;
   fetch(SUPABASE_URL + '/rest/v1/comments?city=eq.' + encodeURIComponent(cityKey) + '&order=created_at.desc&limit=50', {
     headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
-  }).then(function(r) { return r.json(); })
+  })
+    .then(function(r) { return r.json(); })
     .then(function(comments) {
       list = document.getElementById('commentList');
       if (!list) return;
       if (!comments.length) {
         list.innerHTML = '<div style="color:#bbb;font-size:12px;padding:4px 0 8px">还没有留言，来第一个吧～</div>';
       } else {
-        var h = '';
+        var html = '';
         comments.forEach(function(c) {
           var t = new Date(c.created_at);
           var ts = (t.getMonth()+1) + '月' + t.getDate() + '日';
-          h += '<div class="comment-card"><div class="comment-meta"><b>' + c.username + '</b>  ' + ts + '</div>';
-          h += '<div class="comment-text">' + c.content.replace(/&/g,'&amp;').replace(/</g,'&lt;') + '</div></div>';
+          html += '<div class="comment-card"><div class="comment-meta"><b>' + c.username + '</b>  ' + ts + '</div>';
+          html += '<div class="comment-text">' + c.content.replace(/&/g,'&amp;').replace(/</g,'&lt;') + '</div></div>';
         });
-        list.innerHTML = h;
+        list.innerHTML = html;
       }
-    }).catch(function() {
-      var list2 = document.getElementById('commentList');
-      if (list2) list2.innerHTML = '<div style="color:#aaa;font-size:12px">留言加载失败</div>';
+    })
+    .catch(function() {
+      list = document.getElementById('commentList');
+      if (list) list.innerHTML = '<div style="color:#aaa;font-size:12px;padding:4px 0 8px">留言加载失败，请刷新重试</div>';
     });
+}
+
+function showUsernameModal() {
+  document.getElementById('usernameInput').value = username;
+  document.getElementById('usernameModalOverlay').classList.add('open');
+}
+function saveUsername() {
+  var val = document.getElementById('usernameInput').value.trim();
+  if (!val) return;
+  username = val;
+  localStorage.setItem('shanxi_username', username);
+  document.getElementById('usernameModalOverlay').classList.remove('open');
+  renderComments(currentCityKey);
 }
 
 function submitComment() {
@@ -613,59 +987,244 @@ function submitComment() {
   if (txt.length > 500) { alert('留言不能超过500字'); return; }
   var btn = document.getElementById('commentSubmitBtn');
   if (btn) btn.disabled = true;
-  var cityKey = currentCityKey;
   fetch(SUPABASE_URL + '/rest/v1/comments', {
     method: 'POST',
-    headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-    body: JSON.stringify({ city: cityKey, username: username, content: txt })
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify({ city: currentCityKey, username: username, content: txt })
   }).then(function(r) {
-    if (btn) btn.disabled = false;
-    if (r.ok) { document.getElementById('commentText').value = ''; loadCommentList(cityKey); }
-    else { r.text().then(function(e) { alert('发布失败：' + e); }); }
-  }).catch(function() { if (btn) btn.disabled = false; alert('网络错误'); });
+      if (btn) btn.disabled = false;
+      if (r.ok) {
+        document.getElementById('commentText').value = '';
+        loadCommentList(currentCityKey);
+      } else {
+        r.text().then(function(e) { alert('发布失败：' + e); });
+      }
+    })
+    .catch(function() { if (btn) btn.disabled = false; alert('网络错误，请重试'); });
 }
 
-/* ========== 昵称 ========== */
-function showUsernameModal() {
-  document.getElementById('usernameInput').value = username;
-  document.getElementById('usernameModalOverlay').classList.add('open');
-}
-function saveUsername() {
-  var v = document.getElementById('usernameInput').value.trim();
-  if (!v) { alert('请输入昵称'); return; }
-  username = v;
-  localStorage.setItem('travel_username', username);
-  document.getElementById('usernameModalOverlay').classList.remove('open');
-  renderComments(currentCityKey);
+/* ========== 全局勾选统计 ========== */
+function updateGlobalBadge() {
+  var total = Object.keys(checkedItems).length;
+  var btn = document.getElementById('globalPlanBtn');
+  var badge = document.getElementById('globalBadge');
+  if (total > 0) {
+    btn.style.display = 'flex';
+    badge.textContent = total;
+  } else {
+    btn.style.display = 'none';
+  }
 }
 
-/* ========== 全局勾选 Badge ========== */
+/* ========== 行程信息收集弹窗 ========== */
+function openPlanForm() {
+  // 统计已勾选的城市和内容
+  var cityItems = {};
+  Object.keys(checkedItems).forEach(function(key) {
+    var parts = key.split(':');
+    var city = parts[0]; var name = parts[2];
+    if (!cityItems[city]) cityItems[city] = [];
+    cityItems[city].push(name);
+  });
+  var cityNames = { datong:'大同', xinzhou:'忻州', taiyuan:'太原', linfen:'临汾', yuncheng:'运城' };
+  var summary = '已选：';
+  Object.keys(cityItems).forEach(function(c) {
+    summary += (cityNames[c] || c) + '(' + cityItems[c].length + '项) ';
+  });
+  document.getElementById('pfSelectedSummary').textContent = summary;
+  // 默认日期设为今天
+  if (!document.getElementById('pfDate').value) {
+    var d = new Date(); var mm = ('0'+(d.getMonth()+1)).slice(-2); var dd = ('0'+d.getDate()).slice(-2);
+    document.getElementById('pfDate').value = d.getFullYear()+'-'+mm+'-'+dd;
+  }
+  document.getElementById('planFormOverlay').classList.add('open');
+}
+function closePlanForm() {
+  document.getElementById('planFormOverlay').classList.remove('open');
+}
+
+/* ========== AI 生成全局行程 ========== */
+function generateGlobalItinerary() {
+  var origin = document.getElementById('pfOrigin').value.trim();
+  var date = document.getElementById('pfDate').value;
+  var days = parseInt(document.getElementById('pfDays').value) || 3;
+  if (!origin) { alert('请填写出发地'); return; }
+  if (!date) { alert('请选择出发日期'); return; }
+
+  // 按城市整理勾选内容
+  var cityItems = {};
+  var cityOrder = ['datong','xinzhou','taiyuan','linfen','yuncheng'];
+  var cityNames = { datong:'大同', xinzhou:'忻州', taiyuan:'太原', linfen:'临汾', yuncheng:'运城' };
+  Object.keys(checkedItems).forEach(function(key) {
+    var parts = key.split(':'); var city = parts[0]; var name = parts[2];
+    if (!cityItems[city]) cityItems[city] = [];
+    cityItems[city].push(name);
+  });
+
+  var cityList = cityOrder.filter(function(c) { return cityItems[c] && cityItems[c].length; });
+  if (!cityList.length) { alert('请先勾选想去的地方～'); return; }
+
+  var itemDesc = cityList.map(function(c) {
+    return cityNames[c] + '：' + cityItems[c].join('、');
+  }).join('；');
+
+  closePlanForm();
+  document.getElementById('aiModalTitle').textContent = '✨ AI 行程规划';
+  document.getElementById('aiModalBody').innerHTML = '<div style="color:#888;padding:20px 0;text-align:center">🤔 AI规划中，通常需要10秒左右...</div>';
+  document.getElementById('aiModalOverlay').classList.add('open');
+
+  var dateStr = date.replace(/-/g, '/');
+  var prompt = '你是专业山西旅行规划师。根据以下信息生成行程，只输出JSON数组，不要任何其他文字或代码块标记。\n出发地：' + origin + '\n出发日期：' + dateStr + '\n总天数：' + days + '天\n已选内容：' + itemDesc + '\n\n格式（严格JSON数组）：[{"day":1,"date":"5/20 周二","city":"大同","theme":"云冈石窟·古城","slots":[{"time":"上午","icon":"🏛","title":"云冈石窟","desc":"重点看第20窟大佛，游览约2小时","tip":"早去人少"},{"time":"中午","icon":"🍜","title":"齐家疙瘩汤","desc":"点招牌疙瘩汤和开花黄馍馍","tip":"饭点前去避免等位"},{"time":"下午","icon":"🏰","title":"大同古城","desc":"华严寺+代王府步行可达","tip":"穿舒适鞋"},{"time":"交通","icon":"🚗","title":"大同→忻州","desc":"高铁D字头约1.5小时，票价约60元；或自驾高速约2小时","tip":"建议提前买高铁票，周末较紧张"}]}]\n\n交通规划要求（重点）：\n1. 出发地到第一个城市：说明具体交通方式（高铁/飞机/自驾），列出大概时长和费用\n2. 城市之间转场：每次换城市必须加交通slot，注明推荐交通方式+时长+票价范围\n3. 同城景点之间：在desc里说明景点间的距离和移动方式（步行/打车/公交，大概几分钟）\n4. 每个交通slot的tip给出1个实用建议（如提前买票、避开高峰、拼车更省等）\n5. 第1天的第一个slot必须是从出发地到第一个目的地城市的交通slot，包含具体交通方式（高铁/飞机/自驾）、时长、大概票价\n6. 其他每天4-5个slot（上午/中午/下午/晚上），贴士一句话口语化';
+
+  fetch('https://api.deepseek.com/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + DEEPSEEK_KEY },
+    body: JSON.stringify({
+      model: 'deepseek-chat',
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 2000, temperature: 0.7
+    })
+  }).then(function(r) { return r.json(); })
+    .then(function(d) {
+      var raw = d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
+      if (!raw) { document.getElementById('aiModalBody').textContent = '生成失败，请重试'; return; }
+      try {
+        // 提取 JSON（去掉可能的 ```json ``` 包裹）
+        var jsonStr = raw.replace(/```json\s*/gi,'').replace(/```\s*/g,'').trim();
+        var plan = JSON.parse(jsonStr);
+        document.getElementById('aiModalBody').innerHTML = renderPlanCards(plan);
+      } catch(e) {
+        // fallback: 直接显示文本
+        document.getElementById('aiModalBody').innerHTML = '<pre style="white-space:pre-wrap;font-size:13px;line-height:1.7">' + raw + '</pre>';
+      }
+    })
+    .catch(function() {
+      document.getElementById('aiModalBody').textContent = '网络错误，请重试';
+    });
+}
+
+/* ========== 渲染行程卡片 ========== */
+function renderPlanCards(plan) {
+  var dayColors = ['#4a7a4a','#5a6fa8','#a06a3a','#7a4a8a','#3a7a7a'];
+  var timeColors = { '上午':'#fff8e8','中午':'#fff0e8','下午':'#e8f4ff','晚上':'#f0e8ff','交通':'#f0f0f0' };
+  var html = '<div style="padding:4px 0">';
+  plan.forEach(function(day, di) {
+    var color = dayColors[di % dayColors.length];
+    html += '<div style="margin-bottom:20px">';
+    // 天标题
+    html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">';
+    html += '<div style="background:' + color + ';color:#fff;border-radius:20px;padding:4px 14px;font-size:13px;font-weight:700">Day ' + day.day + ' · ' + (day.date||'') + '</div>';
+    html += '<div style="font-size:13px;color:#555;flex:1">' + (day.city||'') + '</div>';
+    html += '</div>';
+    // 主题
+    if (day.theme) html += '<div style="font-size:12px;color:#888;margin:-6px 0 10px 4px">✦ ' + day.theme + '</div>';
+    // 时间段
+    if (day.slots) {
+      day.slots.forEach(function(slot) {
+        var bg = timeColors[slot.time] || '#f8f8f8';
+        var isTransport = slot.time === '交通';
+        html += '<div style="display:flex;gap:10px;margin-bottom:8px;align-items:flex-start">';
+        // 时间轴点
+        html += '<div style="display:flex;flex-direction:column;align-items:center;padding-top:3px">';
+        html += '<div style="width:8px;height:8px;border-radius:50%;background:' + color + ';flex-shrink:0"></div>';
+        html += '<div style="width:2px;flex:1;background:#e0e0e0;margin-top:3px;min-height:24px"></div>';
+        html += '</div>';
+        // 卡片
+        html += '<div style="flex:1;background:' + bg + ';border-radius:12px;padding:10px 12px;margin-bottom:0">';
+        html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">';
+        html += '<span style="font-size:11px;color:#fff;background:' + color + ';border-radius:6px;padding:2px 7px;flex-shrink:0;font-weight:600">' + (slot.time||'') + '</span>';
+        html += '<span style="font-size:18px">' + (slot.icon||'📍') + '</span>';
+        html += '<span style="font-size:14px;font-weight:600;color:#222">' + (slot.title||'') + '</span>';
+        html += '</div>';
+        if (slot.desc) html += '<div style="font-size:13px;color:#444;line-height:1.6;margin-bottom:4px">' + slot.desc + '</div>';
+        if (slot.tip) html += '<div style="font-size:11px;color:#888;background:rgba(0,0,0,.04);border-radius:6px;padding:4px 8px">💡 ' + slot.tip + '</div>';
+        html += '</div>';
+        html += '</div>';
+      });
+    }
+    html += '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+function closeAiModal() {
+  document.getElementById('aiModalOverlay').classList.remove('open');
+}
+
+/* ========== 抽屉开关 ========== */
+function openDrawer(cityKey) {
+  var city = drawerData[cityKey];
+  if (!city) return;
+  currentCityKey = cityKey;
+  currentCityName = city.name;
+  document.getElementById('drawerName').textContent = city.name;
+  document.getElementById('drawerName').style.color = city.color;
+  var icon = document.getElementById('drawerIcon');
+  var icons = { datong: '🏛', xinzhou: '🏔', taiyuan: '🔪', linfen: '💧', yuncheng: '🧂' };
+  var bgs   = { datong: '#fff4ef', xinzhou: '#eff6ff', taiyuan: '#fffbef', linfen: '#f5f0ff', yuncheng: '#fff0f4' };
+  icon.textContent = icons[cityKey] || '📍';
+  icon.style.background = bgs[cityKey] || '#f5f5f5';
+  renderDrawerItems(cityKey, city);
+  renderComments(cityKey);
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('drawer').classList.add('open');
+}
+function closeDrawer() {
+  document.getElementById('overlay').classList.remove('open');
+  document.getElementById('drawer').classList.remove('open');
+}
+
+/* ========== 触摸滑动关闭 ========== */
+var startY = 0;
+updateGlobalBadge();
+document.getElementById('drawer').addEventListener('touchstart', function(e) {
+  startY = e.touches[0].clientY;
+});
+document.getElementById('drawer').addEventListener('touchend', function(e) {
+  var dy = e.changedTouches[0].clientY - startY;
+  if (dy > 80 && this.scrollTop <= 0) closeDrawer();
+});
+
+/* ===== 省份切换 ===== */
+function switchProvince(key) {
+  document.querySelectorAll('.province-tab').forEach(function(t) {
+    t.classList.toggle('active', t.dataset.key === key);
+  });
+  document.querySelectorAll('.province-page').forEach(function(p) {
+    p.classList.toggle('active', p.id === 'page-' + key);
+  });
+  currentProvince = key;
+}
+var currentProvince = 'shanxi';
+
+/* ===== 全局勾选 Badge ===== */
 function updateGlobalBadge() {
   var total = Object.keys(checkedItems).length;
   var btn = document.getElementById('globalPlanBtn');
   var badge = document.getElementById('globalBadge');
   btn.style.display = total > 0 ? 'flex' : 'none';
-  badge.textContent = total;
+  if (badge) badge.textContent = total;
 }
 
-/* ========== 行程信息收集弹窗 ========== */
+/* ===== 行程表单 ===== */
 function openPlanForm() {
+  var cityNames = { datong:'大同', xinzhou:'忻州', taiyuan:'太原', linfen:'临汾', yuncheng:'运城' };
   var cityItems = {};
   Object.keys(checkedItems).forEach(function(key) {
     var parts = key.split(':');
-    // key 格式: province:city:section:name
-    var cityLabel = parts[0] + ':' + parts[1];
-    var name = parts[3];
-    if (!cityItems[cityLabel]) cityItems[cityLabel] = [];
-    cityItems[cityLabel].push(name);
+    var city = parts[0]; var name = parts[2];
+    if (!cityItems[city]) cityItems[city] = [];
+    cityItems[city].push(name);
   });
   var summary = '已选：';
-  Object.keys(cityItems).forEach(function(ck) {
-    var parts = ck.split(':');
-    var prov = PROVINCES.find(function(p) { return p.key === parts[0]; });
-    var city = prov && prov.cities.find(function(c) { return c.key === parts[1]; });
-    var label = city ? city.name : ck;
-    summary += label + '(' + cityItems[ck].length + '项) ';
+  Object.keys(cityItems).forEach(function(c) {
+    summary += (cityNames[c] || c) + '(' + cityItems[c].length + '项) ';
   });
   document.getElementById('pfSelectedSummary').textContent = summary;
   if (!document.getElementById('pfDate').value) {
@@ -676,7 +1235,9 @@ function openPlanForm() {
 }
 function closePlanForm() { document.getElementById('planFormOverlay').classList.remove('open'); }
 
-/* ========== AI 生成行程 ========== */
+/* ===== AI 生成行程 ===== */
+var DEEPSEEK_KEY = 'sk-99dcae7b1be2436dbe16e254b227ae16';
+
 function generateGlobalItinerary() {
   var origin = document.getElementById('pfOrigin').value.trim();
   var date = document.getElementById('pfDate').value;
@@ -684,25 +1245,17 @@ function generateGlobalItinerary() {
   if (!origin) { alert('请填写出发地'); return; }
   if (!date) { alert('请选择出发日期'); return; }
 
+  var cityNames = { datong:'大同', xinzhou:'忻州', taiyuan:'太原', linfen:'临汾', yuncheng:'运城' };
+  var cityOrder = ['datong','xinzhou','taiyuan','linfen','yuncheng'];
   var cityItems = {};
-  var cityOrder = [];
   Object.keys(checkedItems).forEach(function(key) {
-    var parts = key.split(':');
-    var cityLabel = parts[0] + ':' + parts[1];
-    var name = parts[3];
-    if (!cityItems[cityLabel]) { cityItems[cityLabel] = []; cityOrder.push(cityLabel); }
-    cityItems[cityLabel].push(name);
+    var parts = key.split(':'); var city = parts[0]; var name = parts[2];
+    if (!cityItems[city]) cityItems[city] = [];
+    cityItems[city].push(name);
   });
-
-  if (!cityOrder.length) { alert('请先勾选想去的地方～'); return; }
-
-  var itemDesc = cityOrder.map(function(ck) {
-    var parts = ck.split(':');
-    var prov = PROVINCES.find(function(p) { return p.key === parts[0]; });
-    var city = prov && prov.cities.find(function(c) { return c.key === parts[1]; });
-    var label = (prov ? prov.name : parts[0]) + (city ? city.name : parts[1]);
-    return label + '：' + cityItems[ck].join('、');
-  }).join('；');
+  var cityList = cityOrder.filter(function(c) { return cityItems[c] && cityItems[c].length; });
+  if (!cityList.length) { alert('请先勾选想去的地方～'); return; }
+  var itemDesc = cityList.map(function(c) { return (cityNames[c]||c) + '：' + cityItems[c].join('、'); }).join('；');
 
   closePlanForm();
   document.getElementById('aiModalTitle').textContent = '✨ AI 行程规划';
@@ -710,7 +1263,7 @@ function generateGlobalItinerary() {
   document.getElementById('aiModalOverlay').classList.add('open');
 
   var dateStr = date.replace(/-/g, '/');
-  var prompt = '你是专业旅行规划师。根据以下信息生成行程，只输出JSON数组，不要任何其他文字或代码块标记。\n出发地：' + origin + '\n出发日期：' + dateStr + '\n总天数：' + days + '天\n已选内容：' + itemDesc + '\n\n格式（严格JSON数组）：[{"day":1,"date":"5/20 周二","city":"大同","theme":"云冈石窟·古城","slots":[{"time":"上午","icon":"🏛","title":"云冈石窟","desc":"重点看第20窟大佛，游览约2小时","tip":"早去人少"},{"time":"交通","icon":"🚗","title":"大同→忻州","desc":"高铁D字头约1.5小时，票价约60元；或自驾高速约2小时","tip":"建议提前买高铁票"}]}]\n\n交通要求：\n1. 第1天第一个slot必须是从出发地到第一个目的地城市的交通，包含具体交通方式、时长、票价\n2. 城市间转场必须加交通slot，注明推荐方式+时长+票价范围\n3. 同城景点间在desc里说明移动方式（步行/打车/公交+几分钟）\n4. 每天4-5个slot（上午/中午/下午/晚上/交通），贴士一句话口语化';
+  var prompt = '你是专业旅行规划师。根据以下信息生成行程，只输出JSON数组，不要任何其他文字或代码块标记。\n出发地：' + origin + '\n出发日期：' + dateStr + '\n总天数：' + days + '天\n已选内容：' + itemDesc + '\n\n格式（严格JSON数组）：[{"day":1,"date":"5/20 周二","city":"大同","theme":"云冈石窟·古城","slots":[{"time":"上午","icon":"🏛","title":"云冈石窟","desc":"重点看第20窟大佛，游览约2小时，同城打车约15分钟","tip":"早去人少"},{"time":"交通","icon":"🚗","title":"大同→忻州","desc":"高铁D字头约1.5小时票价约60元；或自驾高速约2小时","tip":"建议提前买高铁票"}]},{"day":2,...}]\n\n交通规划要求：\n1. 第1天第一个slot必须是从出发地到第一个目的地城市的交通，包含具体交通方式、时长、票价\n2. 城市间转场必须加交通slot，注明推荐方式+时长+票价范围\n3. 同城景点间在desc里说明移动方式（步行/打车/公交+几分钟）\n4. 每天4-5个slot（上午/中午/下午/晚上/交通），贴士一句话口语化';
 
   fetch('https://api.deepseek.com/chat/completions', {
     method: 'POST',
@@ -731,7 +1284,7 @@ function generateGlobalItinerary() {
     .catch(function() { document.getElementById('aiModalBody').textContent = '网络错误，请重试'; });
 }
 
-/* ========== 渲染行程卡片 ========== */
+/* ===== 渲染行程卡片 ===== */
 function renderPlanCards(plan) {
   var dayColors = ['#4a7a4a','#5a6fa8','#a06a3a','#7a4a8a','#3a7a7a'];
   var html = '<div style="padding:4px 0">';
@@ -765,19 +1318,6 @@ function renderPlanCards(plan) {
   return html;
 }
 
-function closeAiModal() { document.getElementById('aiModalOverlay').classList.remove('open'); }
-
-/* ========== 启动 ========== */
-initProvinces();
-updateGlobalBadge();
-
-// 抽屉下滑关闭
-var startY = 0;
-document.getElementById('drawer').addEventListener('touchstart', function(e) { startY = e.touches[0].clientY; });
-document.getElementById('drawer').addEventListener('touchend', function(e) {
-  var dy = e.changedTouches[0].clientY - startY;
-  if (dy > 80 && this.scrollTop <= 0) closeDrawer();
-});
 </script>
 </body>
 </html>
