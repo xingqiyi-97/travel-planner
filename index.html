@@ -709,7 +709,7 @@ async function submitComment() {
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+DEEPSEEK_KEY},
       body:JSON.stringify({
         model:'deepseek-chat',
-        messages:[{role:'user',content:'你是旅游攻略社区的内容审核员。留言必须同时满足：①内容合规（无广告、无攻击、无政治敏感、无低俗色情）；②有实质旅游价值（含景点/美食/住宿/交通/行程等具体信息或真实体验分享）。以下情况必须拦截：纯情绪感叹（如"真坏啊""哈哈""好棒"）、无意义内容（"测试""123"）、与旅游无关的内容。只返回JSON：{"pass":true/false,"reason":"一句话说明原因"}\n留言内容：'+txt}],
+        messages:[{role:'user',content:'你是旅游攻略社区的内容审核员。拦截标准：①含广告推销；②人身攻击或骂人；③政治敏感；④低俗色情；⑤无意义刷屏（如"测试""123""aaa"）；⑥负面情绪发泄与旅游无关（如"真坏啊""好烦"）。以下情况允许通过：正面情感表达（"好棒""太美了""强烈推荐"）、旅游相关分享、简短实用建议。只返回JSON：{"pass":true/false,"reason":"一句话说明原因"}\n留言内容：'+txt}],
         max_tokens:100, temperature:0
       })
     });
