@@ -850,6 +850,9 @@ document.getElementById('drawer').addEventListener('touchstart',function(e){star
 document.getElementById('drawer').addEventListener('touchend',function(e){if(e.changedTouches[0].clientY-startY>80&&this.scrollTop<=0)closeDrawer();});
 </script>
 
+<script>
+  window._AMapSecurityConfig = { securityJsCode: '7d58f22a8d8925d98dc0fd2f19a1263b' };
+</script>
 <script src="https://webapi.amap.com/maps?v=2.0&key=0d40e2efc279563718d306e53439c5f4&callback=initMap"></script>
 </body>
 </html>
