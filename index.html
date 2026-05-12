@@ -948,6 +948,19 @@ function updateBadge() {
   var btn = document.getElementById('globalPlanBtn');
   document.getElementById('globalBadge').textContent = n;
   btn.style.display = n>0 ? 'flex' : 'none';
+  var clearBtn = document.getElementById('globalClearBtn');
+  if (clearBtn) clearBtn.style.display = n>0 ? 'block' : 'none';
+}
+
+function clearAllChecked() {
+  if (!confirm('确定清空所有已勾选的项目吗？')) return;
+  checkedItems = {};
+  localStorage.setItem('shanxi_checked', '{}');
+  // 刷新当前抽屉内的勾选状态
+  document.querySelectorAll('.check-box').forEach(function(cb) {
+    cb.classList.remove('checked');
+  });
+  updateBadge();
 }
 
 /* ===== 行程规划弹窗 ===== */
