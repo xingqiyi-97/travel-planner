@@ -694,22 +694,48 @@ function saveUsername() {
   document.getElementById('usernameModalOverlay').classList.remove('open');
   renderComments(currentCity ? currentCity.key : '');
 }
-function submitComment() {
+async function submitComment() {
   var ta = document.getElementById('commentText');
   if (!ta||!ta.value.trim()) return;
   var txt = ta.value.trim();
   if (txt.length>500){alert('留言不能超过500字');return;}
   var btn = document.getElementById('commentSubmitBtn');
-  if (btn) btn.disabled = true;
+  if (btn){ btn.disabled=true; btn.textContent='审核中...'; }
+
+  // AI 审核
+  try {
+    var auditResp = await fetch('https://api.deepseek.com/chat/completions',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+DEEPSEEK_KEY},
+      body:JSON.stringify({
+        model:'deepseek-chat',
+        messages:[{role:'user',content:'你是内容审核员。请判断以下留言是否合规（不含广告、人身攻击、政治敏感、低俗色情、无意义刷屏内容）。只返回JSON：{"pass":true/false,"reason":"原因"}\n留言内容：'+txt}],
+        max_tokens:100, temperature:0
+      })
+    });
+    var auditData = await auditResp.json();
+    var auditText = auditData.choices[0].message.content.trim();
+    var auditJson = JSON.parse(auditText.replace(/```json|```/g,'').trim());
+    if (!auditJson.pass) {
+      if (btn){ btn.disabled=false; btn.textContent='发布'; }
+      alert('留言未通过审核：' + (auditJson.reason||'内容不合规，请修改后重新发布'));
+      return;
+    }
+  } catch(e) {
+    // 审核接口异常时放行（降级处理）
+    console.warn('AI审核异常，降级放行', e);
+  }
+
+  // 审核通过，写入 Supabase
   fetch(SUPABASE_URL+'/rest/v1/comments',{
     method:'POST',
     headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
     body:JSON.stringify({city:currentCity.key,username:username,content:txt})
   }).then(function(r){
-    if (btn) btn.disabled=false;
+    if (btn){ btn.disabled=false; btn.textContent='发布'; }
     if (r.ok){ ta.value=''; loadCommentList(currentCity.key); }
     else r.text().then(function(e){alert('发布失败：'+e);});
-  }).catch(function(){ if(btn) btn.disabled=false; alert('网络错误，请重试'); });
+  }).catch(function(){ if(btn){ btn.disabled=false; btn.textContent='发布'; } alert('网络错误，请重试'); });
 }
 
 /* ===== 全局勾选徽章 ===== */
